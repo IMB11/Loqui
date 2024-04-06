@@ -2,9 +2,9 @@ package dev.imb11.loqui.client;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import dev.imb11.loqui.client.i18n.LanguagePackage;
-import dev.imb11.loqui.client.i18n.LoquiPackager;
-import dev.imb11.loqui.client.i18n.LoquiProcessor;
+import dev.imb11.loqui.client.i18n.in.LoquiDownloader;
+import dev.imb11.loqui.client.i18n.out.LoquiPackager;
+import dev.imb11.loqui.client.i18n.out.LoquiProcessor;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.resources.ResourceLocation;
@@ -20,10 +20,12 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 
 public class LoquiReloadListener implements ResourceManagerReloadListener, IdentifiableResourceReloadListener {
     private static final Logger LOGGER = LoggerFactory.getLogger("LoquiReloadListener");
+    public static final Path CACHE_DIR = FabricLoader.getInstance().getConfigDir().resolve(".loqui_cache");
     @Override
     public void onResourceManagerReload(ResourceManager resourceManager) {
         Map<ResourceLocation, Resource> languageFiles = resourceManager.listResources("lang", (resourceLocation) -> resourceLocation.getPath().endsWith(".json"));
@@ -41,38 +43,11 @@ public class LoquiReloadListener implements ResourceManagerReloadListener, Ident
         LoquiProcessor processor = new LoquiProcessor(languageFiles);
         try {
             LoquiPackager packager = new LoquiPackager(processor);
-
             LOGGER.info("Packaged " + packager.languagePackages.size() + "/" + FabricLoader.getInstance().getAllMods().size() + " language files successfully.");
+            packager.send();
 
-            new Thread(() -> {
-                HttpClient client = HttpClient.newHttpClient();
-
-                String body = new Gson().toJson(packager.languagePackages);
-
-                // Write fancy body to output.json
-                Gson builder = new GsonBuilder().setPrettyPrinting().create();
-                try {
-                    Files.writeString(FabricLoader.getInstance().getGameDir().resolve("output.json"), builder.toJson(packager.languagePackages));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://localhost:9182/submit"))
-                        .POST(HttpRequest.BodyPublishers.ofString(body))
-                        .header("Content-Type", "application/json")
-                        .header("User-Agent", "Loqui Mod")
-                        .build();
-
-                HttpResponse<String> response = null;
-                try {
-                    response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                } catch (IOException | InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-
-                LOGGER.info("Sent language files to Loqui API: " + response.body());
-            }).start();
+            LoquiDownloader downloader = new LoquiDownloader(processor);
+//            downloader.recieve();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

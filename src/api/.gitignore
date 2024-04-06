@@ -96,6 +96,7 @@ dist
 
 # Loqui Cache Repo
 ./repo/**
+./repo_readonly/**
 
 # Gatsby files
 .cache/

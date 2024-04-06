@@ -15,48 +15,106 @@ const { getFile, mcCodeToCrowdin } = require("./util");
     );
   }
 
+  if (!fs.existsSync("./repo_readonly")) {
+    await simplegit().clone(
+      "https://github.com/" + config.github_repo + ".git",
+      "./repo_readonly",
+      [ "--branch", "output"]
+    );
+  }
+
   const git = simplegit("./repo");
+  const readonlyGit = simplegit("./repo_readonly");
   const app = express();
 
   app.use(bodyparser.json({limit: '5mb'}));
 
   await git.pull();
+  await readonlyGit.pull();
 
   app.post("/bulk-get", async (req, res) => {
     const body = req.body;
 
+    // Expect an array of:
+    // { namespace: string, version: string, requiredLanguages: string[] }
+
     if (!Array.isArray(body)) {
       res.status(400).send({
-        error: "Invalid request - expected array of namespace objects.",
+        error:
+          "Invalid request - expected array of valid namespace request objects.",
       });
       return;
     }
 
-    const results = [];
     for (const namespaceObject of body) {
-      const namespace = namespaceObject.namespace;
-      const version = namespaceObject.version;
-
-      const path = `./repo/${namespace}/${version}/`;
-
-      if (!fs.existsSync(path)) continue;
-
-      const files = fs.readdirSync(path);
-      const contents = {};
-      for (const file of files) {
-        // Load the translation file for each language.
-        const content = fs.readFileSync(`${path}/${file}`, "utf-8");
-        const language = file.replace(".json", "");
-        contents[language] = content;
-      }
-
-      if (contents != null) {
-        results.push({ namespace, version, contents });
+      if (
+        !namespaceObject.namespace ||
+        !namespaceObject.version ||
+        !namespaceObject.requiredLanguages
+      ) {
+        res.status(400).send({
+          error:
+            "Invalid request - expected array of valid namespace request objects.",
+          stacktrace: namespaceObject
+        });
       }
     }
 
-    res.contentType("application/json");
-    res.status(200).send(results);
+    await readonlyGit.pull();
+
+    // Return an array of:
+    // { namespace: string, version: string, contents: { [locale: string]: string (lang file) } }
+    const response = [];
+
+    for (const namespaceObject of body) {
+      const namespace = namespaceObject.namespace;
+      const version = namespaceObject.version;
+      const requiredLanguages = namespaceObject.requiredLanguages;
+
+      const path = `./repo_readonly/${namespace}/${version}/`;
+
+      if (!fs.existsSync(path)) {
+        response.push({
+          namespace,
+          version,
+          contents: {},
+        });
+        continue;
+      }
+
+      const langFiles = {};
+
+      for (const language of requiredLanguages) {
+        const crowdinLanguage = mcCodeToCrowdin[language];
+        console.log(language);
+
+        // If its not a valid language code, ignore it.
+        if (!crowdinLanguage) {
+          continue;
+        }
+
+        const langPath = `./repo_readonly/${namespace}/${version}/${crowdinLanguage}.json`;
+
+        console.log(langPath);
+
+        // If the translations haven't been generated yet, ignore it.
+        if(!fs.existsSync(langPath)) {
+          continue;
+        }
+
+        console.log(langPath)
+
+        langFiles[language] = fs.readFileSync(langPath, "utf-8");
+      }
+
+      response.push({
+        namespace,
+        version,
+        contents: langFiles,
+      });
+    }
+
+    return res.status(200).send(response);
   });
 
   const submissionQueue = [];
@@ -116,7 +174,7 @@ const { getFile, mcCodeToCrowdin } = require("./util");
 
       // Files should be an array of objects with the following structure:
       // - source: /<namespace>/<version>.json
-      // - translation: /<namespace>/<version>/%locale_with_underscore%.json
+      // - translation: /<namespace>/<version>/%locale%.json
       // - excluded_target_languages: languages specified in namespace config file's version array thingy from above.
       let config = {
         files: []
@@ -172,7 +230,7 @@ const { getFile, mcCodeToCrowdin } = require("./util");
           // Add to config.
           const temporaryConfigEntry = {
             source: `/${namespace}/${version}.json`,
-            translation: `/${namespace}/${version}/%locale_with_underscore%.json`,
+            translation: `/${namespace}/${version}/%locale%.json`,
             excluded_target_languages: serializedLanguages,
           };
 
