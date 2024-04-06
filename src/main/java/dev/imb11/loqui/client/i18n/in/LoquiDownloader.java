@@ -32,10 +32,11 @@ public class LoquiDownloader {
 
     public LoquiDownloader(LoquiProcessor processor) {
         for (Map.Entry<String, ArrayList<String>> stringArrayListEntry : processor.getFilteredMissingLanguages().entrySet()) {
-            System.out.println(stringArrayListEntry.getKey());
-            for (String languageCode : stringArrayListEntry.getValue()) {
-                System.out.println(languageCode);
-            }
+            String namespace = stringArrayListEntry.getKey();
+            ArrayList<String> missingLanguages = stringArrayListEntry.getValue();
+            String version = Util.getVersionFromNamespace(namespace);
+            if(version == null) continue;
+            requests.add(new LanguageRequest(namespace, version, missingLanguages.toArray(String[]::new)));
         }
     }
 

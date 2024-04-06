@@ -25,7 +25,7 @@ import java.util.Map;
 
 public class LoquiReloadListener implements ResourceManagerReloadListener, IdentifiableResourceReloadListener {
     private static final Logger LOGGER = LoggerFactory.getLogger("LoquiReloadListener");
-    public static final Path CACHE_DIR = FabricLoader.getInstance().getConfigDir().resolve(".loqui_cache");
+    public static final Path CACHE_DIR = FabricLoader.getInstance().getGameDir().resolve(".loqui_cache");
     @Override
     public void onResourceManagerReload(ResourceManager resourceManager) {
         Map<ResourceLocation, Resource> languageFiles = resourceManager.listResources("lang", (resourceLocation) -> resourceLocation.getPath().endsWith(".json"));
@@ -47,7 +47,7 @@ public class LoquiReloadListener implements ResourceManagerReloadListener, Ident
             packager.send();
 
             LoquiDownloader downloader = new LoquiDownloader(processor);
-//            downloader.recieve();
+            downloader.recieve();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
