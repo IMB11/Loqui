@@ -95,7 +95,7 @@ dist
 .secrets.json
 
 # Loqui Cache Repo
-./repo
+./repo/**
 
 # Gatsby files
 .cache/

@@ -42,11 +42,9 @@ const { getFile } = require("./util");
     const body = req.body;
 
     if (!Array.isArray(body)) {
-      res
-        .status(400)
-        .send({
-          error: "Invalid request - expected array of namespace objects.",
-        });
+      res.status(400).send({
+        error: "Invalid request - expected array of namespace objects.",
+      });
       return;
     }
 
@@ -55,14 +53,21 @@ const { getFile } = require("./util");
       const namespace = namespaceObject.namespace;
       const version = namespaceObject.version;
 
-      const path = `./repo/${namespace}/${version}.json`;
+      const path = `./repo/${namespace}/${version}/`;
 
-      const contents = getFile(namespace, version);
+      if (!fs.existsSync(path)) continue;
+
+      const files = fs.readdirSync(path);
+      const contents = {};
+      for (const file of files) {
+        // Load the translation file for each language.
+        const content = fs.readFileSync(`${path}/${file}`, "utf-8");
+        const language = file.split(".")[0];
+        contents[language] = content;
+      }
 
       if (contents != null) {
         results.push({ namespace, version, contents });
-      } else {
-        results.push({ namespace, version, error: "File not found." });
       }
     }
 
@@ -72,7 +77,7 @@ const { getFile } = require("./util");
 
   const submissionQueue = [];
 
-  const isProcessing = false;
+  let isProcessing = false;
   setInterval(async () => {
     // Process the next submission in the queue.
     const submission = submissionQueue.shift();
@@ -82,7 +87,7 @@ const { getFile } = require("./util");
 
       // If the namespace already exists, check if the version exists too.
       // If it does, ignore it.
-      for (const namespaceObject of body) {
+      for (const namespaceObject of submission) {
         const namespace = namespaceObject.namespace;
         const version = namespaceObject.version;
 
@@ -98,14 +103,14 @@ const { getFile } = require("./util");
 
           // Namespace doesn't exist, so we need to create a new directory with namespace-config.json which maps versions and the required languages for each version.
           const config = {};
-          config[version] = namespaceObject.missingLanguages;
+          config[version] = namespaceObject.excludedLanguages;
         } else {
           // Namespace exists, load config and edit it if needed.
           const configPath = `./repo/${namespace}/${namespace}-config.json`;
           const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 
           if (!config[version]) {
-            config[version] = namespaceObject.missingLanguages;
+            config[version] = namespaceObject.excludedLanguages;
           }
         }
 
@@ -116,11 +121,11 @@ const { getFile } = require("./util");
       await git.add("*");
 
       // Regenerate the crowdin config file.
-      
+
       // Files should be an array of objects with the following structure:
       // - source: /<namespace>/<version>.json
-      // - translation: /<namespace>/<version>/<language>.json
-      // - export_languages: languages specified in namespace config file's version array thingy from above.
+      // - translation: /<namespace>/<version>/%locale_with_underscore%.json
+      // - excluded_target_languages: languages specified in namespace config file's version array thingy from above.
       const config = {
         files: [],
       };
@@ -138,24 +143,39 @@ const { getFile } = require("./util");
         // For each version, get the languages from the config file.
         for (const version of versions) {
           const languages = JSON.parse(
-            fs.readFileSync(`./repo/${namespace}/${namespace}-config.json`, "utf-8")
+            fs.readFileSync(
+              `./repo/${namespace}/${namespace}-config.json`,
+              "utf-8"
+            )
           )[version];
+
+          const serializedLanguages = [];
+
+          // For each language code, make it xx-XX if it's not already.
+          for (const language of languages) {
+            if (language.includes("-")) {
+              serializedLanguages.push(language);
+            } else {
+              const parts = language.split("_");
+              serializedLanguages.push(parts.join("-"));
+            }
+          }
 
           // Add to config.
           config.files.push({
             source: `/${namespace}/${version}.json`,
-            translation: `/${namespace}/${version}/{language}.json`,
-            export_languages: languages,
+            translation: `/${namespace}/${version}/%locale_with_underscore%.json`,
+            excluded_target_languages: serializedLanguages,
           });
         }
       }
 
       // Write the config to crowdin.yml
       const yml = YAML.stringify(config);
-      if(fs.existsSync("./repo/crowdin.yml")) fs.rmSync("./repo/crowdin.yml");
+      if (fs.existsSync("./repo/crowdin.yml")) fs.rmSync("./repo/crowdin.yml");
       fs.writeFileSync("./repo/crowdin.yml", yml);
 
-      await git.push("origin", "main");
+      // await git.push("origin", "main");
 
       isProcessing = false;
     }
@@ -165,14 +185,12 @@ const { getFile } = require("./util");
     const body = req.body;
 
     // Expect an array of:
-    // { namespace: string, version: string, contents: string, missingLanguages: string[] }
+    // { namespace: string, version: string, contents: string, excludedLanguages: string[] }
     if (!Array.isArray(body)) {
-      res
-        .status(400)
-        .send({
-          error:
-            "Invalid request - expected array of valid namespace submission objects.",
-        });
+      res.status(400).send({
+        error:
+          "Invalid request - expected array of valid namespace submission objects.",
+      });
       return;
     }
 
@@ -181,14 +199,12 @@ const { getFile } = require("./util");
         !namespaceObject.namespace ||
         !namespaceObject.version ||
         !namespaceObject.contents ||
-        !namespaceObject.missingLanguages
+        !namespaceObject.excludedLanguages
       ) {
-        res
-          .status(400)
-          .send({
-            error:
-              "Invalid request - expected array of valid namespace submission objects.",
-          });
+        res.status(400).send({
+          error:
+            "Invalid request - expected array of valid namespace submission objects.",
+        });
         return;
       }
     }
