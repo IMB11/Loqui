@@ -1,0 +1,25 @@
+{
+    "schemaVersion": 1,
+    "id": "loqui",
+    "version": "${version}",
+    "name": "Loqui",
+    "description": "",
+    "authors": [],
+    "contact": {
+        "repo": "https://github.com/IMB11/Loqui"
+    },
+    "license": "MIT",
+    "icon": "assets/loqui/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "client": [
+            "dev.imb11.loqui.client.LoquiEntrypoints"
+        ]
+    },
+    "mixins": [],
+    "depends": {
+        "fabricloader": ">=${loader_version}",
+        "fabric": "*",
+        "minecraft": "${minecraft_version}"
+    }
+}
