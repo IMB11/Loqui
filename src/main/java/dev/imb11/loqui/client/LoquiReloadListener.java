@@ -1,5 +1,7 @@
 package dev.imb11.loqui.client;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import dev.imb11.loqui.client.i18n.LanguagePackage;
 import dev.imb11.loqui.client.i18n.LoquiPackager;
 import dev.imb11.loqui.client.i18n.LoquiProcessor;
@@ -13,6 +15,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Files;
 import java.util.Map;
 
 public class LoquiReloadListener implements ResourceManagerReloadListener, IdentifiableResourceReloadListener {
@@ -27,7 +34,36 @@ public class LoquiReloadListener implements ResourceManagerReloadListener, Ident
 
             LOGGER.info("Packaged " + packager.languagePackages.size() + "/" + FabricLoader.getInstance().getAllMods().size() + " language files successfully.");
 
+            new Thread(() -> {
+                HttpClient client = HttpClient.newHttpClient();
 
+                String body = new Gson().toJson(packager.languagePackages);
+
+                // Write fancy body to output.json
+                Gson builder = new GsonBuilder().setPrettyPrinting().create();
+                try {
+                    Files.writeString(FabricLoader.getInstance().getGameDir().resolve("output.json"), builder.toJson(packager.languagePackages));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("http://localhost:9182/submit"))
+                        .POST(HttpRequest.BodyPublishers.ofString(body))
+                        .header("Content-Type", "application/json")
+                        .header("User-Agent", "Loqui Mod")
+                        .build();
+
+                HttpResponse<String> response = null;
+                try {
+                    response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                } catch (IOException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                System.out.println(response.statusCode());
+                System.out.println(response.body());
+            }).start();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

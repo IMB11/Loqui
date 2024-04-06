@@ -18,8 +18,6 @@
     },
     "mixins": [],
     "depends": {
-        "fabricloader": ">=${loader_version}",
-        "fabric": "*",
-        "minecraft": "${minecraft_version}"
+        "fabric": "*"
     }
 }

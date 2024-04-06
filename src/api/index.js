@@ -1,10 +1,10 @@
 const express = require("express");
-const YAML = require("yaml");
+const YAML = require("js-yaml");
 const bodyparser = require("body-parser");
 const fs = require("fs");
 const simplegit = require("simple-git").default;
 const config = require("./.secrets.json");
-const { getFile } = require("./util");
+const { getFile, mcCodeToCrowdin } = require("./util");
 
 (async () => {
   // Load repository into ./repo if it doesnt exist.
@@ -18,7 +18,7 @@ const { getFile } = require("./util");
   const git = simplegit("./repo");
   const app = express();
 
-  app.use(bodyparser.json());
+  app.use(bodyparser.json({limit: '5mb'}));
 
   await git.pull();
 
@@ -62,7 +62,7 @@ const { getFile } = require("./util");
       for (const file of files) {
         // Load the translation file for each language.
         const content = fs.readFileSync(`${path}/${file}`, "utf-8");
-        const language = file.split(".")[0];
+        const language = file.replace(".json", "");
         contents[language] = content;
       }
 
@@ -93,6 +93,7 @@ const { getFile } = require("./util");
 
         const dir = `./repo/${namespace}`;
         const path = `./repo/${namespace}/${version}.json`;
+        const configPath = `./repo/${namespace}/namespace-config.json`;
 
         if (fs.existsSync(path)) {
           continue;
@@ -104,9 +105,10 @@ const { getFile } = require("./util");
           // Namespace doesn't exist, so we need to create a new directory with namespace-config.json which maps versions and the required languages for each version.
           const config = {};
           config[version] = namespaceObject.excludedLanguages;
+
+          fs.writeFileSync(configPath, JSON.stringify(config), "utf-8");
         } else {
           // Namespace exists, load config and edit it if needed.
-          const configPath = `./repo/${namespace}/${namespace}-config.json`;
           const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 
           if (!config[version]) {
@@ -126,13 +128,17 @@ const { getFile } = require("./util");
       // - source: /<namespace>/<version>.json
       // - translation: /<namespace>/<version>/%locale_with_underscore%.json
       // - excluded_target_languages: languages specified in namespace config file's version array thingy from above.
-      const config = {
-        files: [],
+      let config = {
+        files: []
       };
+
+      if(fs.existsSync("./repo/crowdin.yml")) {
+        config = YAML.load(fs.readFileSync("./repo/crowdin.yml", "utf-8"));
+      }
 
       // Get all namespace folders - exclude crowdin.yml and README.md
       const namespaces = fs.readdirSync("./repo").filter((f) => {
-        return f !== "crowdin.yml" && f !== "README.md";
+        return f !== "crowdin.yml" && f !== "README.md" && f !== ".git";
       });
 
       for (const namespace of namespaces) {
@@ -141,39 +147,58 @@ const { getFile } = require("./util");
         });
 
         // For each version, get the languages from the config file.
-        for (const version of versions) {
-          const languages = JSON.parse(
+        for (const versionFile of versions) {
+          const version = versionFile.replace(".json", "")
+          const versionDefinitions = JSON.parse(
             fs.readFileSync(
-              `./repo/${namespace}/${namespace}-config.json`,
+              `./repo/${namespace}/namespace-config.json`,
               "utf-8"
             )
-          )[version];
+          );
+          
+          // Check if source already exists in config.
+          const existingEntry = config.files.find((f) => {
+            return f.source === `/${namespace}/${version}.json`;
+          });
+
+          if (existingEntry) {
+            continue;
+          }
+
+  
+          const languages = versionDefinitions[version];
 
           const serializedLanguages = [];
-
           // For each language code, make it xx-XX if it's not already.
           for (const language of languages) {
-            if (language.includes("-")) {
-              serializedLanguages.push(language);
-            } else {
-              const parts = language.split("_");
-              serializedLanguages.push(parts.join("-"));
+            const serialized = mcCodeToCrowdin[language];
+            if (serialized) {
+              serializedLanguages.push(serialized);
             }
+
+            // Ignore invalid language codes.
           }
 
           // Add to config.
-          config.files.push({
+          const temporaryConfigEntry = {
             source: `/${namespace}/${version}.json`,
             translation: `/${namespace}/${version}/%locale_with_underscore%.json`,
             excluded_target_languages: serializedLanguages,
-          });
+          };
+
+          if(temporaryConfigEntry.excluded_target_languages.length == 0) {
+            delete temporaryConfigEntry.excluded_target_languages;
+          }
+          config.files.push(temporaryConfigEntry);
         }
       }
 
       // Write the config to crowdin.yml
-      const yml = YAML.stringify(config);
+      const yml = YAML.dump(config, { forceQuotes: true});
       if (fs.existsSync("./repo/crowdin.yml")) fs.rmSync("./repo/crowdin.yml");
       fs.writeFileSync("./repo/crowdin.yml", yml);
+
+      await git.add("*");
 
       // await git.push("origin", "main");
 
@@ -204,6 +229,7 @@ const { getFile } = require("./util");
         res.status(400).send({
           error:
             "Invalid request - expected array of valid namespace submission objects.",
+          stacktrace: namespaceObject,
         });
         return;
       }
