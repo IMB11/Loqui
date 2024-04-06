@@ -4,11 +4,13 @@
   "private": "true",
   "main": "index.js",
   "scripts": {
-    "run": "node index.js"
+    "dev": "node index.js"
   },
   "dependencies": {
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "simple-git": "^3.24.0",
+    "yaml": "^2.4.1"
   }
 }

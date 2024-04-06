@@ -1,13 +1,204 @@
 const express = require("express");
+const YAML = require("yaml");
+const bodyparser = require("body-parser");
+const fs = require("fs");
+const simplegit = require("simple-git").default;
+const config = require("./.secrets.json");
+const { getFile } = require("./util");
 
-const app = express();
+(async () => {
+  // Load repository into ./repo if it doesnt exist.
+  if (!fs.existsSync("./repo")) {
+    await simplegit().clone(
+      "https://github.com/" + config.github_repo + ".git",
+      "./repo"
+    );
+  }
 
-// Load repository into ./repo
+  const git = simplegit("./repo");
+  const app = express();
 
-app.get("/", (req, res) => {
-  res.send("Hello World");
-});
+  app.use(bodyparser.json());
 
-app.listen(9182, () => {
-  console.log("Server is running on port 9182");
-});
+  await git.pull();
+
+  app.get("/:namespace/:version", async (req, res) => {
+    const namespace = req.params.namespace;
+    const version = req.params.version;
+
+    const path = `./repo/${namespace}/${version}.json`;
+
+    const contents = getFile(namespace, version);
+
+    if (contents === null) {
+      res.status(404).send({ error: "File not found." });
+    } else {
+      res.contentType("application/json");
+      res.status(200).send(contents);
+    }
+  });
+
+  app.post("/bulk-get", async (req, res) => {
+    const body = req.body;
+
+    if (!Array.isArray(body)) {
+      res
+        .status(400)
+        .send({
+          error: "Invalid request - expected array of namespace objects.",
+        });
+      return;
+    }
+
+    const results = [];
+    for (const namespaceObject of body) {
+      const namespace = namespaceObject.namespace;
+      const version = namespaceObject.version;
+
+      const path = `./repo/${namespace}/${version}.json`;
+
+      const contents = getFile(namespace, version);
+
+      if (contents != null) {
+        results.push({ namespace, version, contents });
+      } else {
+        results.push({ namespace, version, error: "File not found." });
+      }
+    }
+
+    res.contentType("application/json");
+    res.status(200).send(results);
+  });
+
+  const submissionQueue = [];
+
+  const isProcessing = false;
+  setInterval(async () => {
+    // Process the next submission in the queue.
+    const submission = submissionQueue.shift();
+
+    if (submission && !isProcessing) {
+      isProcessing = true;
+
+      // If the namespace already exists, check if the version exists too.
+      // If it does, ignore it.
+      for (const namespaceObject of body) {
+        const namespace = namespaceObject.namespace;
+        const version = namespaceObject.version;
+
+        const dir = `./repo/${namespace}`;
+        const path = `./repo/${namespace}/${version}.json`;
+
+        if (fs.existsSync(path)) {
+          continue;
+        }
+
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir);
+
+          // Namespace doesn't exist, so we need to create a new directory with namespace-config.json which maps versions and the required languages for each version.
+          const config = {};
+          config[version] = namespaceObject.missingLanguages;
+        } else {
+          // Namespace exists, load config and edit it if needed.
+          const configPath = `./repo/${namespace}/${namespace}-config.json`;
+          const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+
+          if (!config[version]) {
+            config[version] = namespaceObject.missingLanguages;
+          }
+        }
+
+        // Write contents to path.
+        fs.writeFileSync(path, namespaceObject.contents);
+      }
+
+      await git.add("*");
+
+      // Regenerate the crowdin config file.
+      
+      // Files should be an array of objects with the following structure:
+      // - source: /<namespace>/<version>.json
+      // - translation: /<namespace>/<version>/<language>.json
+      // - export_languages: languages specified in namespace config file's version array thingy from above.
+      const config = {
+        files: [],
+      };
+
+      // Get all namespace folders - exclude crowdin.yml and README.md
+      const namespaces = fs.readdirSync("./repo").filter((f) => {
+        return f !== "crowdin.yml" && f !== "README.md";
+      });
+
+      for (const namespace of namespaces) {
+        const versions = fs.readdirSync(`./repo/${namespace}`).filter((f) => {
+          return f !== "namespace-config.json";
+        });
+
+        // For each version, get the languages from the config file.
+        for (const version of versions) {
+          const languages = JSON.parse(
+            fs.readFileSync(`./repo/${namespace}/${namespace}-config.json`, "utf-8")
+          )[version];
+
+          // Add to config.
+          config.files.push({
+            source: `/${namespace}/${version}.json`,
+            translation: `/${namespace}/${version}/{language}.json`,
+            export_languages: languages,
+          });
+        }
+      }
+
+      // Write the config to crowdin.yml
+      const yml = YAML.stringify(config);
+      if(fs.existsSync("./repo/crowdin.yml")) fs.rmSync("./repo/crowdin.yml");
+      fs.writeFileSync("./repo/crowdin.yml", yml);
+
+      await git.push("origin", "main");
+
+      isProcessing = false;
+    }
+  }, 1000);
+
+  app.post("/submit", async (req, res) => {
+    const body = req.body;
+
+    // Expect an array of:
+    // { namespace: string, version: string, contents: string, missingLanguages: string[] }
+    if (!Array.isArray(body)) {
+      res
+        .status(400)
+        .send({
+          error:
+            "Invalid request - expected array of valid namespace submission objects.",
+        });
+      return;
+    }
+
+    for (const namespaceObject of body) {
+      if (
+        !namespaceObject.namespace ||
+        !namespaceObject.version ||
+        !namespaceObject.contents ||
+        !namespaceObject.missingLanguages
+      ) {
+        res
+          .status(400)
+          .send({
+            error:
+              "Invalid request - expected array of valid namespace submission objects.",
+          });
+        return;
+      }
+    }
+
+    // Submit to submissionQueue;
+    submissionQueue.push(body);
+    return res.status(200).send({ success: true });
+  });
+
+  app.listen(9182, () => {
+    console.log("Server is running on port 9182");
+  });
+})();
