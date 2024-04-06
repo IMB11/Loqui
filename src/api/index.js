@@ -22,22 +22,6 @@ const { getFile, mcCodeToCrowdin } = require("./util");
 
   await git.pull();
 
-  app.get("/:namespace/:version", async (req, res) => {
-    const namespace = req.params.namespace;
-    const version = req.params.version;
-
-    const path = `./repo/${namespace}/${version}.json`;
-
-    const contents = getFile(namespace, version);
-
-    if (contents === null) {
-      res.status(404).send({ error: "File not found." });
-    } else {
-      res.contentType("application/json");
-      res.status(200).send(contents);
-    }
-  });
-
   app.post("/bulk-get", async (req, res) => {
     const body = req.body;
 
@@ -79,11 +63,17 @@ const { getFile, mcCodeToCrowdin } = require("./util");
 
   let isProcessing = false;
   setInterval(async () => {
+
+    // time how long it takes to perform this operation.
+    const start = Date.now();
+
     // Process the next submission in the queue.
     const submission = submissionQueue.shift();
 
     if (submission && !isProcessing) {
       isProcessing = true;
+
+      await git.pull();
 
       // If the namespace already exists, check if the version exists too.
       // If it does, ignore it.
@@ -194,16 +184,19 @@ const { getFile, mcCodeToCrowdin } = require("./util");
       }
 
       // Write the config to crowdin.yml
-      const yml = YAML.dump(config, { forceQuotes: true});
+      const yml = YAML.dump(config);
       if (fs.existsSync("./repo/crowdin.yml")) fs.rmSync("./repo/crowdin.yml");
       fs.writeFileSync("./repo/crowdin.yml", yml);
 
       await git.add("*");
 
-      // await git.push("origin", "main");
+      await git.push("origin", "main");
 
       isProcessing = false;
+
+      console.log(`Processed submission in ${Date.now() - start}ms.`);
     }
+
   }, 1000);
 
   app.post("/submit", async (req, res) => {

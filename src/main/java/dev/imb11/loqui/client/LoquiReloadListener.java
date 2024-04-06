@@ -28,6 +28,16 @@ public class LoquiReloadListener implements ResourceManagerReloadListener, Ident
     public void onResourceManagerReload(ResourceManager resourceManager) {
         Map<ResourceLocation, Resource> languageFiles = resourceManager.listResources("lang", (resourceLocation) -> resourceLocation.getPath().endsWith(".json"));
 
+        // Remove any language files that exist in a namespace that has namespace:noloqui.txt present.
+        var keyset = languageFiles.keySet();
+        for (String namespace : resourceManager.getNamespaces()) {
+            ResourceLocation noloqui = new ResourceLocation(namespace, "noloqui.txt");
+            if (resourceManager.getResource(noloqui).isPresent()) {
+                LOGGER.info("Removing namespace " + namespace + " from indexing as requested.");
+                keyset.removeIf(resourceLocation -> resourceLocation.getNamespace().equals(namespace));
+            }
+        }
+
         LoquiProcessor processor = new LoquiProcessor(languageFiles);
         try {
             LoquiPackager packager = new LoquiPackager(processor);
@@ -61,8 +71,7 @@ public class LoquiReloadListener implements ResourceManagerReloadListener, Ident
                     throw new RuntimeException(e);
                 }
 
-                System.out.println(response.statusCode());
-                System.out.println(response.body());
+                LOGGER.info("Sent language files to Loqui API: " + response.body());
             }).start();
         } catch (IOException e) {
             throw new RuntimeException(e);
