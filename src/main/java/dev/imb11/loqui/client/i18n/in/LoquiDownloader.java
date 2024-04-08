@@ -36,6 +36,14 @@ public class LoquiDownloader {
             ArrayList<String> missingLanguages = stringArrayListEntry.getValue();
             String version = Util.getVersionFromNamespace(namespace);
             if(version == null) continue;
+
+            for (String missingLanguage : missingLanguages.toArray(String[]::new)) {
+                Path cachePath = LoquiReloadListener.CACHE_DIR.resolve(namespace + "-" + version + "-" + missingLanguage + ".json");
+                if(Files.exists(cachePath)) {
+                    missingLanguages.remove(missingLanguage);
+                }
+            }
+
             requests.add(new LanguageRequest(namespace, version, missingLanguages.toArray(String[]::new)));
         }
     }
@@ -66,15 +74,11 @@ public class LoquiDownloader {
                 for (JsonElement element : array) {
                     JsonObject obj = element.getAsJsonObject();
 
-                    System.out.println(obj);
-
                     String namespace = obj.get("namespace").getAsString();
                     String version = obj.get("version").getAsString();
                     JsonObject contents = obj.getAsJsonObject("contents");
 
                     if(contents == null) continue;
-
-                    System.out.println(contents);
 
                     HashMap<String, String> languageContents = new HashMap<>();
                     for (Map.Entry<String, JsonElement> entry : contents.entrySet()) {

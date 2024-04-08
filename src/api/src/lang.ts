@@ -1,17 +1,6 @@
-module.exports.getFile = function (namespace, version) {
-  const path = `./repo/${namespace}/${version}.json`;
+const mcCodeToCrowdin: {[key: string]: string} = {};
 
-  if (!fs.existsSync(path)) {
-    return null;
-  } else {
-    const contents = fs.readFileSync(path, "utf-8");
-    return contents;
-  }
-};
-
-const mcCodeToCrowdin = {};
-
-function add(mcCode, crowdinCode) {
+function add(mcCode: string, crowdinCode: string) {
   mcCodeToCrowdin[mcCode] = crowdinCode;
 }
 
@@ -20,11 +9,9 @@ add("ar_sa", "ar");
 add("ast_es", "ast");
 add("az_az", "az");
 add("ba_ru", "ba");
-//add("bar", "bar");			// Bavaria
 add("be_by", "be");
 add("bg_bg", "bg");
 add("br_fr", "br-FR");
-//add("brb", "brb");			// Brabantian
 add("bs_ba", "bs");
 add("ca_es", "ca");
 add("cs_cz", "cs");
@@ -41,7 +28,6 @@ add("en_nz", "en-NZ");
 add("en_pt", "en-PT");
 add("en_ud", "en-UD");
 add("en_us", "en-US");
-//add("enp", "enp");			// Anglish
 add("en_ws", "en-WS");
 add("en_7s", "en-PT");
 add("en_ud", "en-UD");
@@ -53,7 +39,6 @@ add("es_es", "es-ES");
 add("es_mx", "es-MX");
 add("es_uy", "es-UY");
 add("es_ve", "es-VE");
-//add("esan", "esan");			// Andalusian
 add("et_ee", "et");
 add("eu_es", "eu");
 add("fa_ir", "fa");
@@ -77,7 +62,6 @@ add("id_id", "id");
 add("ig_ng", "ig");
 add("io_en", "ido");
 add("is_is", "is");
-//add("isv", "isv");			// Interslavic
 add("it_it", "it");
 add("ja_jp", "ja");
 add("jbo_en", "jbo");
@@ -85,7 +69,6 @@ add("ka_ge", "ka");
 add("kk_kz", "kk");
 add("kn_in", "kn");
 add("ko_kr", "ko");
-//add("ksh", "ksh");			// Ripuarian
 add("kw_gb", "kw");
 add("la_la", "la-LA");
 add("lb_lu", "lb");
@@ -93,7 +76,6 @@ add("li_li", "li");
 add("lol_us", "lol");
 add("lt_lt", "lt");
 add("lv_lv", "lv");
-//add("lzh", "lzh");			// Classical Chinese
 add("mi_NZ", "mi");
 add("mk_mk", "mk");
 add("mn_mn", "mn");
@@ -105,13 +87,11 @@ add("nl_nl", "nl");
 add("nn_no", "nn-NO");
 add("no_no", "no");
 add("oc_fr", "oc");
-//add("ovd", "ovd");			// Elfdalian
 add("pl_pl", "pl");
 add("pt_br", "pt-BR");
 add("pt_pt", "pt-PT");
 add("qya_aa", "qya-AA");
 add("ro_ro", "ro");
-//add("rpr", "rpr");			// Russian (pre-revolutionary)
 add("ru_ru", "ru");
 add("se_no", "se");
 add("sk_sk", "sk");
@@ -120,8 +100,6 @@ add("so_so", "so");
 add("sq_al", "sq");
 add("sr_sp", "sr");
 add("sv_se", "sv-SE");
-//add("sxu", "sxu");			// Upper Saxon German
-//add("szl", "szl");			// Silesian
 add("ta_in", "ta");
 add("th_th", "th");
 add("tl_ph", "tl");
@@ -138,4 +116,11 @@ add("zh_cn", "zh-CN");
 add("zh_hk", "zh-HK");
 add("zh_tw", "zh-TW");
 
-module.exports.mcCodeToCrowdin = mcCodeToCrowdin;
+export function convertLanguageCode(mcCode: string): string | undefined {
+  return mcCodeToCrowdin[mcCode];
+}
+
+export function convertLanguageCodes(mcCodes: string[]): string[] {
+  // return mcCodes.map(convertLanguageCode).filter((code) => code);
+  return mcCodes.map(convertLanguageCode).filter((code: string | undefined) => code !== undefined) as string[];
+}

@@ -1,0 +1,171 @@
+import * as express from "express";
+import * as crowdin from "./crowdin";
+import { json } from "body-parser";
+import { simpleGit } from "simple-git";
+import { existsSync, readFileSync } from "fs";
+
+const config = JSON.parse(readFileSync(".secrets.json", "utf-8"));
+
+interface DownloadResponse {
+  namespace: string;
+  version: string;
+  contents: { [locale: string]: string };
+}
+
+interface UploadRequest {
+  namespace: string;
+  version: string;
+  contents: string;
+  excludedLanguages: string[];
+}
+
+(async () => {
+  // Load repository into ./repo if it doesnt exist.
+  if (!existsSync("./repo")) {
+    await simpleGit().clone(
+      "https://github.com/" + config.github_repo + ".git",
+      "./repo"
+    );
+  }
+
+  if (!existsSync("./repo_readonly")) {
+    await simpleGit().clone(
+      "https://github.com/" + config.github_repo + ".git",
+      "./repo_readonly",
+      [ "--branch", "output"]
+    );
+  }
+
+  const git = simpleGit("./repo");
+  const readonlyGit = simpleGit("./repo_readonly");
+  const app = express.default();
+
+  app.use(json({limit: '5mb'}));
+
+  app.post("/bulk-get", async (req, res) => {
+    const body = req.body;
+
+    // Expect an array of:
+    // { namespace: string, version: string, requiredLanguages: string[] }
+
+    if (!Array.isArray(body)) {
+      res.status(400).send({
+        error:
+          "Invalid request - expected array of valid namespace request objects.",
+      });
+      return;
+    }
+
+    for (const namespaceObject of body) {
+      if (
+        !namespaceObject.namespace ||
+        !namespaceObject.version ||
+        !namespaceObject.requiredLanguages
+      ) {
+        res.status(400).send({
+          error:
+            "Invalid request - expected array of valid namespace request objects.",
+          stacktrace: namespaceObject
+        });
+      }
+    }
+
+    await readonlyGit.pull();
+
+    // Return an array of:
+    const responses: DownloadResponse[] = [];
+    const crowdinConfig = crowdin.loadConfig();
+
+    for (const namespaceObject of body) {
+
+      const response: DownloadResponse = {
+        namespace: namespaceObject.namespace,
+        version: namespaceObject.version,
+        contents: {}
+      };
+
+      for (const lang of namespaceObject.requiredLanguages) {
+        const data = crowdin.tryGetEntry(crowdinConfig, namespaceObject.namespace, namespaceObject.version, lang);
+
+        if (data) {
+          response.contents[lang] = data;
+        }
+      };
+
+      responses.push(response);
+    }
+
+    return res.status(200).send(responses);
+  });
+
+  const submissionQueue: UploadRequest[][] = [];
+  let isProcessing = false;
+  setInterval(async () => {
+
+    // time how long it takes to perform this operation.
+    const start = Date.now();
+
+    // Process the next submission in the queue.
+    const submission = submissionQueue.shift();
+
+    if (submission && !isProcessing) {
+      isProcessing = true;
+
+      await git.pull();
+      const crowdinConfig = crowdin.loadConfig();
+
+      for (const namespaceObject of submission) {
+        crowdin.addEntry(crowdinConfig, namespaceObject.namespace, namespaceObject.version, namespaceObject.contents, namespaceObject.excludedLanguages);
+      }
+
+      crowdin.optimizeConfig(crowdinConfig);
+
+      await git.add("*");
+
+      await git.push("origin", "main");
+
+      isProcessing = false;
+
+      console.log(`Processed submission in ${Date.now() - start}ms.`);
+    }
+
+  }, 1000);
+
+  app.post("/submit", async (req, res) => {
+    const body = req.body;
+
+    // Expect an array of:
+    // { namespace: string, version: string, contents: string, excludedLanguages: string[] }
+    if (!Array.isArray(body)) {
+      res.status(400).send({
+        error:
+          "Invalid request - expected array of valid namespace submission objects.",
+      });
+      return;
+    }
+
+    for (const namespaceObject of body) {
+      if (
+        !namespaceObject.namespace ||
+        !namespaceObject.version ||
+        !namespaceObject.contents ||
+        !namespaceObject.excludedLanguages
+      ) {
+        res.status(400).send({
+          error:
+            "Invalid request - expected array of valid namespace submission objects.",
+          stacktrace: namespaceObject,
+        });
+        return;
+      }
+    }
+
+    // Submit to submissionQueue;
+    submissionQueue.push(body);
+    return res.status(200).send({ success: true });
+  });
+
+  app.listen(9182, () => {
+    console.log("Server is running on port 9182");
+  });
+})();

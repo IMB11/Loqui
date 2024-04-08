@@ -2,11 +2,13 @@ package dev.imb11.loqui.client;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.mojang.authlib.minecraft.client.MinecraftClient;
 import dev.imb11.loqui.client.i18n.in.LoquiDownloader;
 import dev.imb11.loqui.client.i18n.out.LoquiPackager;
 import dev.imb11.loqui.client.i18n.out.LoquiProcessor;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -51,6 +53,8 @@ public class LoquiReloadListener implements ResourceManagerReloadListener, Ident
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+
     }
 
     @Override
