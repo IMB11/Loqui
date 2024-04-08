@@ -1,10 +1,11 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { cpSync, exists, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, write, writeFileSync } from "fs";
 import * as YAML from "js-yaml";
 import { join, resolve } from "path";
 import { convertLanguageCode, convertLanguageCodes } from "./lang";
 import sanitize from "sanitize-filename";
+import { globSync } from "glob";
 
-const TRANSLATION_PATH = "/%original_file_name%/%file_name%/%locale%.json";
+const TRANSLATION_PATH = "/%original_path%/%file_name%/%locale%.json";
 const REPO_FOLDER = resolve(__dirname, "..", "repo");
 const OUTPUT_FOLDER = resolve(__dirname, "..", "repo_readonly");
 const CROWDIN_CONFIG_PATH = resolve(REPO_FOLDER, "crowdin.yml");
@@ -37,6 +38,12 @@ export interface CrowdinFile {
   source: string;
   translation: string;
   excluded_target_languages?: string[];
+}
+
+export interface RootIndex {
+  [namespace: string]: {
+    [version: string]: string;
+  };
 }
 
 export interface CrowdinConfig {
@@ -76,6 +83,34 @@ function saveConfig(config: CrowdinConfig) {
 
   const content = YAML.dump(config);
   writeFileSync(CROWDIN_CONFIG_PATH, content, "utf8");
+
+  // Note which namespace/version pair is in which group in the group_index.json file (root directory)
+  let groupIndex: RootIndex = {};
+
+  if(existsSync(join(REPO_FOLDER, "group_index.json"))) {
+    rmSync(join(REPO_FOLDER, "group_index.json"));
+  }
+
+  for (const group of config.files) {
+    const groupName = group.source.replace("/*/*.json", "");
+
+    const jsonFiles = globSync(join(REPO_FOLDER, groupName, "**/*.json"));
+
+    for (const file of jsonFiles) {
+      // Last two parts of the path are the namespace and version (-json)
+      const parts = file.split("/");
+      const namespace = parts[parts.length - 2].replace("/", "");
+      const version = parts[parts.length - 1].replace(".json", "");
+
+      if (groupIndex[namespace] === undefined) {
+        groupIndex[namespace] = {};
+      }
+
+      groupIndex[namespace][version] = groupName;
+    }
+  }
+
+  writeFileSync(join(REPO_FOLDER, "group_index.json"), JSON.stringify(groupIndex, null, 2), "utf8");
 }
 
 // Creates a new group folder, and returns the path to the new group.
@@ -270,16 +305,19 @@ export function tryGetEntry(config: CrowdinConfig, namespace: string, version: s
     return undefined;
   }
 
-  for (const group of config.files) {
-    const groupName = group.source.replace("/*/*.json", "");
-    const filePath = resolve(OUTPUT_FOLDER, groupName, namespace, version, `${requestedLanguage}.json`);
+  try {
+    const groupIndex = JSON.parse(readFileSync(join(REPO_FOLDER, "group_index.json"), "utf8")) as RootIndex;
+    const namespaceIndex = groupIndex[namespace];
+    const groupName = namespaceIndex[version];
 
-    try {
+    // Get file from the group.
+    const filePath = join(OUTPUT_FOLDER, groupName, namespace, version, `${requestedLanguage}.json`);
+
+    // Read the file.
+    if (existsSync(filePath)) {
       return readFileSync(filePath, "utf8");
-    } catch {
-      continue;
     }
-  }
+  } catch {}
 
   return undefined;
 }

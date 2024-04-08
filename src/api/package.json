@@ -21,6 +21,7 @@
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "express-rate-limit": "^6.8.1",
+    "glob": "^10.3.12",
     "js-yaml": "^4.1.0",
     "sanitize-filename": "^1.6.3",
     "simple-git": "^3.24.0",

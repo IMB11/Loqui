@@ -61,8 +61,6 @@ public class LoquiDownloader {
             try {
                 response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-                System.out.println(response.body());
-
                 // Parse the response, write language files to disk as cache.
                 ArrayList<LanguageResponse> responses = new ArrayList<>();
 
@@ -99,6 +97,7 @@ public class LoquiDownloader {
                 }
             } catch (IOException | InterruptedException e) {
                 LOGGER.info("Failed to download language files from Loqui API.");
+                LOGGER.warn(e.getMessage());
             }
         }).start();
     }

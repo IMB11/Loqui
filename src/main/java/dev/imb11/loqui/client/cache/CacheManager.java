@@ -53,12 +53,12 @@ public class CacheManager implements ClientModInitializer {
     }
 
     public static void submitContent(String namespace, String version, String language, String content) throws IOException {
-        Path cachePath = CACHE_DIR.resolve("assets/" + namespace + "/lang/" + language + ".json");
+        Path cachePath = CACHE_DIR.resolve("assets/" + namespace + "/lang/");
         if (!cachePath.toFile().exists()) {
             cachePath.toFile().mkdirs();
         }
 
-        Files.writeString(cachePath, content);
+        Files.writeString(Path.of(cachePath.toString(), language + ".json"), content);
 
         // Write version JSON to namespace_data_loqui.json
         JsonObject object = new JsonObject();

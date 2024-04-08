@@ -1,5 +1,6 @@
 import * as express from "express";
 import * as crowdin from "./crowdin";
+import rateLimit from "express-rate-limit";
 import { json } from "body-parser";
 import { simpleGit } from "simple-git";
 import { existsSync, readFileSync } from "fs";
@@ -42,7 +43,11 @@ interface UploadRequest {
 
   app.use(json({limit: '5mb'}));
 
-  app.post("/bulk-get", async (req, res) => {
+  app.post("/bulk-get", rateLimit({
+    windowMs: 30 * 60 * 1000, // 30 mins per window.
+    max: 1, // max 1 requests per window.
+    standardHeaders: true,
+  }), async (req, res) => {
     const body = req.body;
 
     // Expect an array of:
@@ -86,7 +91,6 @@ interface UploadRequest {
 
       for (const lang of namespaceObject.requiredLanguages) {
         const data = crowdin.tryGetEntry(crowdinConfig, namespaceObject.namespace, namespaceObject.version, lang);
-
         if (data) {
           response.contents[lang] = data;
         }
@@ -122,6 +126,8 @@ interface UploadRequest {
 
       await git.add("*");
 
+      await git.commit("New Submission(s) from API.")
+
       await git.push("origin", "main");
 
       isProcessing = false;
@@ -131,7 +137,11 @@ interface UploadRequest {
 
   }, 1000);
 
-  app.post("/submit", async (req, res) => {
+  app.post("/submit", rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 mins per window.
+    max: 1, // max 1 requests per window.
+    standardHeaders: true,
+  }), async (req, res) => {
     const body = req.body;
 
     // Expect an array of:
@@ -163,6 +173,22 @@ interface UploadRequest {
     // Submit to submissionQueue;
     submissionQueue.push(body);
     return res.status(200).send({ success: true });
+  });
+
+  app.get("/", (req, res) => {
+    // Redirect to loqui.imb11.dev
+    res.redirect("https://loqui.imb11.dev");
+  });
+
+  app.get("/health", rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 mins per window.
+    max: 3, // max 3 requests per window.
+    standardHeaders: true,
+  }), (req, res) => {
+
+    const crowdinConfig = crowdin.loadConfig();
+
+    res.status(200).send({ status: "ok", groups: crowdinConfig.files.length });
   });
 
   app.listen(9182, () => {
