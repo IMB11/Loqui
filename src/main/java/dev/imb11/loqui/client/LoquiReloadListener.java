@@ -44,17 +44,18 @@ public class LoquiReloadListener implements ResourceManagerReloadListener, Ident
 
         LoquiProcessor processor = new LoquiProcessor(languageFiles);
         try {
-            LoquiPackager packager = new LoquiPackager(processor);
-            LOGGER.info("Packaged " + packager.languagePackages.size() + "/" + FabricLoader.getInstance().getAllMods().size() + " language files successfully.");
-            packager.send();
+            if (!LoquiEntrypoints.HAS_REPORTED) {
+                LoquiEntrypoints.HAS_REPORTED = true;
+                LoquiPackager packager = new LoquiPackager(processor);
+                LOGGER.info("Packaged " + packager.languagePackages.size() + "/" + FabricLoader.getInstance().getAllMods().size() + " language files successfully.");
+                packager.send();
+            }
 
             LoquiDownloader downloader = new LoquiDownloader(processor);
             downloader.recieve();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-
     }
 
     @Override
