@@ -1,9 +1,8 @@
-import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFile, readFileSync, rmdirSync, writeFileSync } from "fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import * as YAML from "js-yaml";
 import { join, resolve } from "path";
 import { convertLanguageCode, convertLanguageCodes } from "./lang";
 import sanitize from "sanitize-filename";
-import { inspect } from "util";
 
 const TRANSLATION_PATH = "/%original_file_name%/%file_name%/%locale%.json";
 const REPO_FOLDER = resolve(__dirname, "..", "repo");
@@ -17,20 +16,20 @@ function arrayCompare(_arr1: any[], _arr2: any[]) {
     !Array.isArray(_arr1)
     || !Array.isArray(_arr2)
     || _arr1.length !== _arr2.length
-    ) {
-      return false;
-    }
-  
+  ) {
+    return false;
+  }
+
   // .concat() to not mutate arguments
   const arr1 = _arr1.concat().sort();
   const arr2 = _arr2.concat().sort();
-  
+
   for (let i = 0; i < arr1.length; i++) {
-      if (arr1[i] !== arr2[i]) {
-          return false;
-       }
+    if (arr1[i] !== arr2[i]) {
+      return false;
+    }
   }
-  
+
   return true;
 }
 
@@ -142,7 +141,7 @@ export function addEntry(config: CrowdinConfig, namespace: string, version: stri
   for (const file of config.files) {
     const excludedLanguagesFile = file.excluded_target_languages;
 
-    if(excludedLanguages === undefined) {
+    if (excludedLanguages === undefined) {
       break;
     }
 
@@ -152,11 +151,11 @@ export function addEntry(config: CrowdinConfig, namespace: string, version: stri
       break;
     }
 
-    if(excludedLanguagesFile === undefined) {
+    if (excludedLanguagesFile === undefined) {
       continue;
     }
 
-    if(excludedLanguages.length !== excludedLanguagesFile.length) {
+    if (excludedLanguages.length !== excludedLanguagesFile.length) {
       continue;
     }
 
@@ -186,13 +185,13 @@ export function addEntry(config: CrowdinConfig, namespace: string, version: stri
   writeFileSync(filePath, content, "utf8");
 
   // Mark the config as needing to be optimized.
-  if(groupCreated) {
+  if (groupCreated) {
     NEED_TO_OPTIMIZE = true;
   }
 }
 
 export function optimizeConfig(config: CrowdinConfig) {
-  if(!NEED_TO_OPTIMIZE) return;
+  if (!NEED_TO_OPTIMIZE) return;
 
   // Merge groups with the same excluded languages into one group.
   const newConfig: CrowdinConfig = {
@@ -246,7 +245,7 @@ export function optimizeConfig(config: CrowdinConfig) {
       config.files.splice(config.files.indexOf(otherGroup), 1);
 
       // Remove the other group folder.
-      rmdirSync(otherGroupPath, { recursive: true });
+      rmSync(otherGroupPath, { recursive: true });
     }
   }
 

@@ -4,16 +4,13 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import dev.imb11.loqui.client.LoquiEntrypoints;
 import dev.imb11.loqui.client.LoquiReloadListener;
-import dev.imb11.loqui.client.i18n.Util;
+import dev.imb11.loqui.client.cache.CacheManager;
+import dev.imb11.loqui.client.cache.NamespaceHelper;
 import dev.imb11.loqui.client.i18n.out.LoquiProcessor;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.Resource;
-import net.minecraft.server.packs.resources.ResourceManager;
-import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -21,20 +18,19 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 
 public class LoquiDownloader {
+    private static final Logger LOGGER = LoggerFactory.getLogger("LoquiDownloader");
     public ArrayList<LanguageRequest> requests = new ArrayList<>();
 
     public LoquiDownloader(LoquiProcessor processor) {
         for (Map.Entry<String, ArrayList<String>> stringArrayListEntry : processor.getFilteredMissingLanguages().entrySet()) {
             String namespace = stringArrayListEntry.getKey();
             ArrayList<String> missingLanguages = stringArrayListEntry.getValue();
-            String version = Util.getVersionFromNamespace(namespace);
+            String version = NamespaceHelper.getVersionFromNamespace(namespace);
             if(version == null) continue;
 
             for (String missingLanguage : missingLanguages.toArray(String[]::new)) {
@@ -98,17 +94,11 @@ public class LoquiDownloader {
                         String languageCode = entry.getKey();
                         String languageData = entry.getValue();
 
-                        Path path = LoquiReloadListener.CACHE_DIR.resolve(namespace + "-" + version + "-" + languageCode + ".json");
-                        try {
-                            Files.createDirectories(path.getParent());
-                            Files.writeString(path, languageData);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+                        CacheManager.submitContent(namespace, version, languageCode, languageData);
                     }
                 }
             } catch (IOException | InterruptedException e) {
-                throw new RuntimeException(e);
+                LOGGER.info("Failed to download language files from Loqui API.");
             }
         }).start();
     }

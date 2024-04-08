@@ -1,14 +1,10 @@
 package dev.imb11.loqui.client;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.mojang.authlib.minecraft.client.MinecraftClient;
 import dev.imb11.loqui.client.i18n.in.LoquiDownloader;
 import dev.imb11.loqui.client.i18n.out.LoquiPackager;
 import dev.imb11.loqui.client.i18n.out.LoquiProcessor;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -17,11 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -44,8 +35,8 @@ public class LoquiReloadListener implements ResourceManagerReloadListener, Ident
 
         LoquiProcessor processor = new LoquiProcessor(languageFiles);
         try {
-            if (!LoquiEntrypoints.HAS_REPORTED) {
-                LoquiEntrypoints.HAS_REPORTED = true;
+            if (!Loqui.HAS_REPORTED) {
+                Loqui.HAS_REPORTED = true;
                 LoquiPackager packager = new LoquiPackager(processor);
                 LOGGER.info("Packaged " + packager.languagePackages.size() + "/" + FabricLoader.getInstance().getAllMods().size() + " language files successfully.");
                 packager.send();

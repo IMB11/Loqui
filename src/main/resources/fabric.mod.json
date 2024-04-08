@@ -13,7 +13,11 @@
     "environment": "*",
     "entrypoints": {
         "client": [
-            "dev.imb11.loqui.client.LoquiEntrypoints"
+            "dev.imb11.loqui.client.Loqui",
+            "dev.imb11.loqui.client.cache.CacheManager"
+        ],
+        "preLaunch": [
+            "dev.imb11.loqui.client.cache.NamespaceHelper"
         ]
     },
     "mixins": [],
