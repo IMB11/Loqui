@@ -1,6 +1,6 @@
 # Loqui
 
-The goal of Loqui is to provide a free, open-source, and community-driven translation service for Minecraft mods.
+The goal of Loqui is to provide free, open-source, and community-driven translations for ALL Minecraft mods.
 
 The main benefit of Loqui is that mod developers can get their mods translated into multiple languages for free, without having to manually manage translations - Loqui allows mod developers to download any completed translations and bundle them directly into their mods!
 

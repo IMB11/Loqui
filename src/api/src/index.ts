@@ -45,7 +45,7 @@ interface UploadRequest {
 
   app.post("/bulk-get", rateLimit({
     windowMs: 30 * 60 * 1000, // 30 mins per window.
-    max: 1, // max 1 requests per window.
+    max: 15, // max 15 requests per window.
     standardHeaders: true,
   }), async (req, res) => {
     const body = req.body;
@@ -191,7 +191,7 @@ interface UploadRequest {
     res.status(200).send({ status: "ok", groups: crowdinConfig.files.length });
   });
 
-  app.listen(9182, () => {
-    console.log("Server is running on port 9182");
+  app.listen(config.port_number, () => {
+    console.log("Server is running on port " + config.port_number);
   });
 })();

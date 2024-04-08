@@ -95,9 +95,8 @@ public class LoquiDownloader {
                         CacheManager.submitContent(namespace, version, languageCode, languageData);
                     }
                 }
-            } catch (IOException | InterruptedException e) {
-                LOGGER.info("Failed to download language files from Loqui API.");
-                LOGGER.warn(e.getMessage());
+            } catch (Exception e) {
+                LOGGER.error("Failed to download language files from Loqui API.");
             }
         }).start();
     }

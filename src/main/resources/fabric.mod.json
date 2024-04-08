@@ -3,7 +3,7 @@
     "id": "loqui",
     "version": "${version}",
     "name": "Loqui",
-    "description": "",
+    "description": "Free, open-source, and community-driven translations for ALL Minecraft mods.",
     "authors": [],
     "contact": {
         "repo": "https://github.com/IMB11/Loqui"
