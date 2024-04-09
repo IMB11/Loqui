@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import { json } from "body-parser";
 import { simpleGit } from "simple-git";
 import { existsSync, readFileSync } from "fs";
+import blacklist from "./blacklist";
 
 const config = JSON.parse(readFileSync(".secrets.json", "utf-8"));
 
@@ -119,6 +120,10 @@ interface UploadRequest {
       const crowdinConfig = crowdin.loadConfig();
 
       for (const namespaceObject of submission) {
+        if (blacklist.includes(namespaceObject.namespace)) {
+          continue;
+        }
+
         crowdin.addEntry(crowdinConfig, namespaceObject.namespace, namespaceObject.version, namespaceObject.contents, namespaceObject.excludedLanguages);
       }
 
@@ -139,7 +144,7 @@ interface UploadRequest {
 
   app.post("/submit", rateLimit({
     windowMs: 10 * 60 * 1000, // 10 mins per window.
-    max: 1, // max 1 requests per window.
+    max: 5, // max 5 requests per window.
     standardHeaders: true,
   }), async (req, res) => {
     const body = req.body;
