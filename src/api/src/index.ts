@@ -7,6 +7,9 @@ import { existsSync, readFileSync } from "fs";
 import blacklist from "./blacklist";
 
 const config = JSON.parse(readFileSync(".secrets.json", "utf-8"));
+const user = "LqBot";
+const repo = "github.com/mineblock11/loqui-translations";
+const remoteURL = `https://${user}:${config.github_token}@${repo}`;
 
 interface DownloadResponse {
   namespace: string;
@@ -25,14 +28,14 @@ interface UploadRequest {
   // Load repository into ./repo if it doesnt exist.
   if (!existsSync("./repo")) {
     await simpleGit().clone(
-      "https://github.com/" + config.github_repo + ".git",
+      remoteURL,
       "./repo"
     );
   }
 
   if (!existsSync("./repo_readonly")) {
     await simpleGit().clone(
-      "https://github.com/" + config.github_repo + ".git",
+      remoteURL,
       "./repo_readonly",
       [ "--branch", "output"]
     );
