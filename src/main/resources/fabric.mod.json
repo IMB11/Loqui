@@ -10,7 +10,7 @@
     },
     "license": "MIT",
     "icon": "assets/loqui/icon.png",
-    "environment": "*",
+    "environment": "client",
     "entrypoints": {
         "client": [
             "dev.imb11.loqui.client.Loqui",
@@ -20,7 +20,9 @@
             "dev.imb11.loqui.client.cache.NamespaceHelper"
         ]
     },
-    "mixins": [],
+    "mixins": [
+        "loqui.mixins.json"
+    ],
     "depends": {
         "fabric": "*"
     }
