@@ -1,20 +1,34 @@
+### **_Loqui depends on community contributions, please help us translate at [Loqui's Crowdin Project](https://crowdin.com/project/loqui-moddedmc)_**
+
 # Loqui
 
 The goal of Loqui is to provide free, open-source, and community-driven translations for ALL Minecraft mods.
 
-The main benefit of Loqui is that mod developers can get their mods translated into multiple languages for free, without having to manually manage translations - Loqui allows mod developers to download any completed translations and bundle them directly into their mods!
-
-Loqui supports all Fabric mods, and is designed to be as easy to use as possible. It supports versioning, so if a mod changes its translation keys, Loqui will automatically manage the translations for each version.
-
 *A NeoForge port is planned, but the current goal is to smooth out any significant bugs and issues that may happen.*
 
-**Loqui is currently in development and is not yet ready for production use.**
+## For Users
 
-## Want To Help Translate?
+Simply drop Loqui into your mods folder, and it will download any translations you need from the Loqui API, it's that simple!
 
-Join the Crowdin Project: https://crowdin.com/project/loqui-moddedmc
+## For Modpack Developers
 
-Anyone can translate, but please be aware that **translations are moderated by verified proofreaders**. If you would like to become a verified proofreader, please join the [Discord](https://discord.imb11.dev/) and ask in the `#translator-chat` channel.
+Again, include Loqui in your modpack and you can allow your users to play in their native language!
+
+It's recommended you encourage your community to join the [Loqui Crowdin Project](https://crowdin.com/project/loqui-moddedmc/) in order to improve the quality and quantity of translations - the more the merrier!
+
+## For Mod Developers
+
+As a mod developer, you are extremely welcome to download any completed translations from Loqui's [Translation Repository](https://github.com/mineblock11/loqui-translations/tree/output) and bundle them with your mod. 
+
+Loqui has an intelligent algorithm that allows translations to be accurate across versions, and ignore any existing translations your mod may provide!
+
+![The Crowdin Translation Editor](https://cdn.modrinth.com/data/cached_images/c458c9197691a2839356db8c10d87268f5fd01d7.png)
+
+## Benefits
+
+- **Crowdsourced translations** - Get your mod translated by the community for free, all translations are moderated by verified proofreaders.
+- **Automatic updates** - No need to manually update translations, Loqui will do it for you.
+- **Ability to download translations** - You can download the translations from Crowdin and bundle them directly in your mod if you wish.
 
 ## Technical Explanation
 
@@ -30,26 +44,13 @@ Anyone can translate, but please be aware that **translations are moderated by v
     2. Cross-version translations are possible - a translation key can have multiple translations for different versions if needed.
     3. Once translated, Crowdin re-syncs with the repository, and when the API receives a translation download request, the translations are downloaded from the synchronized repository.
 6. When the Loqui mod requests translations, it will download the translations from the API and apply them to the game.
-    1. Only the translations for the mods installed will be downloaded.
-
-## Benefits
-
-- **Crowdsourced translations** - Get your mod translated by the community for free, all translations are moderated by verified proofreaders.
-- **Automatic updates** - No need to manually update translations, Loqui will do it for you.
-- **Ability to download translations** - You can download the translations from Crowdin and bundle them directly in your mod if you wish.
+    1. Only the translations for the mods installed (taking into account versions and what translations exist locally) will be downloaded.
 
 ## What About Licenses?
 
 This has been debated quite a bit, and the consensus is that translation files are designed to be edited and redistributed, therefore this is a case where licenses should not really apply.
 
 *If you feel that your mod's translations should not be crowd-sourced, you can opt-out of Loqui by adding a `noloqui.txt` file to your mod's assets or contacting me directly for any stronger measures.*
-
-## Installation
-
-Loqui is available for Fabric 1.19.4 to 1.20.4 - it is not available for NeoForge yet as mentioned above.
-
-- Modrinth: https://modrinth.com/mod/loqui
-- CurseForge: https://www.curseforge.com/minecraft/mc-mods/loqui
 
 ## Opt-out
 
