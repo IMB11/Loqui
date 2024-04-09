@@ -1,3 +1,6 @@
+// An array of **NAMESPACES** not MOD IDS!!!
+// This is a list of namespaces that should not be uploaded to Crowdin.
+// Eg: assets/<namespace>/...
 export default [
   "apexcore",
   "fantasydice",
