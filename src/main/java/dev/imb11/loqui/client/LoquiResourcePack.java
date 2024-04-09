@@ -51,9 +51,9 @@ public class LoquiResourcePack implements PackResources {
                     .orElse(null);
         }
 
-        Path cacheDirectory = LoquiReloadListener.CACHE_DIR;
-        if (cacheDirectory.toFile().exists()) {
-            return IoSupplier.create(cacheDirectory);
+        Path cachedFile = CacheManager.CACHE_DIR.resolve(strings[0]);
+        if (cachedFile.toFile().exists()) {
+            return IoSupplier.create(cachedFile);
         }
 
         return null;

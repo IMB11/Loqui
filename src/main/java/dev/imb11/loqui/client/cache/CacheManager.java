@@ -24,14 +24,6 @@ public class CacheManager implements ClientModInitializer {
             CACHE_DIR.resolve("assets/").toFile().mkdirs();
         }
 
-        // 1. Get all namespaces, where ** is the namespace: CACHE_DIR/assets/**/namespace_data_loqui.json
-        // 2. For each namespace, check if the namespace_data_loqui.json file exists
-        // 3. If it does not exist, delete the namespace cache.
-        // 4. If it does, read the file and check the namespace version.
-        // 5. Check what the actual loaded version is from loader.
-        // 6. If the versions do not match, delete the namespace cache.
-        // Else, leave it, it's valid!
-
         ArrayList<String> namespaces = new ArrayList<>();
         Files.walk(CACHE_DIR.resolve("assets/"))
                 .filter(Files::isDirectory)
@@ -55,6 +47,11 @@ public class CacheManager implements ClientModInitializer {
                 }
             }
         }
+    }
+
+    public static boolean contentExists(String namespace, String version, String language) {
+        Path cachePath = CACHE_DIR.resolve("assets/" + namespace + "/lang/" + language + ".json");
+        return cachePath.toFile().exists();
     }
 
     public static void submitContent(String namespace, String version, String language, String content) throws IOException {

@@ -8,6 +8,7 @@ import dev.imb11.loqui.client.LoquiReloadListener;
 import dev.imb11.loqui.client.cache.CacheManager;
 import dev.imb11.loqui.client.cache.NamespaceHelper;
 import dev.imb11.loqui.client.i18n.out.LoquiProcessor;
+import net.minecraft.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +22,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public class LoquiDownloader {
     private static final Logger LOGGER = LoggerFactory.getLogger("LoquiDownloader");
@@ -34,8 +36,7 @@ public class LoquiDownloader {
             if(version == null) continue;
 
             for (String missingLanguage : missingLanguages.toArray(String[]::new)) {
-                Path cachePath = LoquiReloadListener.CACHE_DIR.resolve(namespace + "-" + version + "-" + missingLanguage + ".json");
-                if(Files.exists(cachePath)) {
+                if(CacheManager.contentExists(namespace, version, missingLanguage)) {
                     missingLanguages.remove(missingLanguage);
                 }
             }
@@ -45,7 +46,7 @@ public class LoquiDownloader {
     }
 
     public void recieve() {
-        new Thread(() -> {
+        CompletableFuture.<Void>supplyAsync(() -> {
             Gson gson = new Gson();
             HttpClient client = HttpClient.newHttpClient();
             String body = new Gson().toJson(requests);
@@ -57,7 +58,7 @@ public class LoquiDownloader {
                     .header("User-Agent", "Loqui Mod")
                     .build();
 
-            HttpResponse<String> response = null;
+            HttpResponse<String> response;
             try {
                 response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -98,6 +99,8 @@ public class LoquiDownloader {
             } catch (Exception e) {
                 LOGGER.error("Failed to download language files from Loqui API.");
             }
-        }).start();
+
+            return null;
+        }, Util.ioPool());
     }
 }
