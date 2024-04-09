@@ -7,10 +7,12 @@ import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -19,15 +21,21 @@ public class CacheManager implements ClientModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("Loqui/CacheManager");
     private static final Gson gson = new Gson();
 
+    static {
+        CACHE_DIR = FabricLoader.getInstance().getGameDir().resolve(".loqui_translations/");
+    }
+
     public static void validateCache() throws IOException {
         if (!CACHE_DIR.toFile().exists()) {
             CACHE_DIR.resolve("assets/").toFile().mkdirs();
         }
 
         ArrayList<String> namespaces = new ArrayList<>();
-        Files.walk(CACHE_DIR.resolve("assets/"))
-                .filter(Files::isDirectory)
-                .forEach(path -> namespaces.add(path.getFileName().toString()));
+        File assetsDir = CACHE_DIR.resolve("assets/").toFile();
+        String[] directories = assetsDir.list((current, name) -> new File(current, name).isDirectory());
+        if (directories != null) {
+            namespaces.addAll(Arrays.asList(directories));
+        }
 
         for (String namespace : namespaces) {
             Path namespaceData = CACHE_DIR.resolve("assets/" + namespace + "/namespace_data_loqui.json");
@@ -39,7 +47,7 @@ public class CacheManager implements ClientModInitializer {
                 String actualVersion = NamespaceHelper.getVersionFromNamespace(namespace);
 
                 // May be disabled, or they may reinstall it later.
-                if(actualVersion == null) continue;
+                if (actualVersion == null) continue;
 
                 // If the versions do not match, delete the namespace cache - aggressive cache invalidation.
                 if (!versionString.equals(actualVersion)) {
@@ -68,10 +76,6 @@ public class CacheManager implements ClientModInitializer {
         Files.writeString(CACHE_DIR.resolve("assets/" + namespace + "/namespace_data_loqui.json"), gson.toJson(object));
     }
 
-    static {
-        CACHE_DIR = FabricLoader.getInstance().getGameDir().resolve(".loqui_translations/");
-    }
-
     public static Set<String> getCachedNamespaces() {
         // Get namespaces from the cache directory.
         HashSet<String> namespaces = new HashSet<>();
@@ -90,6 +94,7 @@ public class CacheManager implements ClientModInitializer {
     public void onInitializeClient() {
         try {
             CacheManager.validateCache();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
     }
 }

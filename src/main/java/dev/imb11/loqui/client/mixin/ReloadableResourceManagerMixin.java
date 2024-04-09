@@ -14,8 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Mixin(ReloadableResourceManager.class)
-public abstract class ReloadableResourceManagerMixin
-{
+public abstract class ReloadableResourceManagerMixin {
     @Shadow
     @Final
     private PackType type;
@@ -25,8 +24,7 @@ public abstract class ReloadableResourceManagerMixin
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/packs/resources/MultiPackResourceManager;<init>(Lnet/minecraft/server/packs/PackType;Ljava/util/List;)V"),
             index = 1
     )
-    private List<PackResources> onPostReload(List<PackResources> packs)
-    {
+    private List<PackResources> onPostReload(List<PackResources> packs) {
         if (this.type != PackType.CLIENT_RESOURCES)
             return packs;
 

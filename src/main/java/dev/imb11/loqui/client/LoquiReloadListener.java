@@ -13,11 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Map;
 
 public class LoquiReloadListener implements ResourceManagerReloadListener, IdentifiableResourceReloadListener {
     private static final Logger LOGGER = LoggerFactory.getLogger("LoquiReloadListener");
+
     @Override
     public void onResourceManagerReload(ResourceManager resourceManager) {
         Map<ResourceLocation, Resource> languageFiles = resourceManager.listResources("lang", (resourceLocation) -> resourceLocation.getPath().endsWith(".json"));

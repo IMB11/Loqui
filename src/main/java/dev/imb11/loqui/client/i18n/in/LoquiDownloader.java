@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import dev.imb11.loqui.client.LoquiReloadListener;
 import dev.imb11.loqui.client.cache.CacheManager;
 import dev.imb11.loqui.client.cache.NamespaceHelper;
 import dev.imb11.loqui.client.i18n.out.LoquiProcessor;
@@ -12,13 +11,10 @@ import net.minecraft.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,10 +29,10 @@ public class LoquiDownloader {
             String namespace = stringArrayListEntry.getKey();
             ArrayList<String> missingLanguages = stringArrayListEntry.getValue();
             String version = NamespaceHelper.getVersionFromNamespace(namespace);
-            if(version == null) continue;
+            if (version == null) continue;
 
             for (String missingLanguage : missingLanguages.toArray(String[]::new)) {
-                if(CacheManager.contentExists(namespace, version, missingLanguage)) {
+                if (CacheManager.contentExists(namespace, version, missingLanguage)) {
                     missingLanguages.remove(missingLanguage);
                 }
             }
@@ -73,7 +69,7 @@ public class LoquiDownloader {
                     String version = obj.get("version").getAsString();
                     JsonObject contents = obj.getAsJsonObject("contents");
 
-                    if(contents == null) continue;
+                    if (contents == null) continue;
 
                     HashMap<String, String> languageContents = new HashMap<>();
                     for (Map.Entry<String, JsonElement> entry : contents.entrySet()) {
@@ -87,7 +83,7 @@ public class LoquiDownloader {
                     String namespace = resp.namespace();
                     String version = resp.version();
 
-                    if(resp.contents() == null) continue;
+                    if (resp.contents() == null) continue;
 
                     for (Map.Entry<String, String> entry : resp.contents().entrySet()) {
                         String languageCode = entry.getKey();

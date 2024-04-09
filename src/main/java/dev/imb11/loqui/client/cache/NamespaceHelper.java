@@ -24,14 +24,14 @@ public class NamespaceHelper implements PreLaunchEntrypoint {
     public static @Nullable String getVersionFromNamespace(String namespace) {
         Optional<ModContainer> modContainer = FabricLoader.getInstance().getModContainer(namespace);
 
-        if(modContainer.isPresent()) {
+        if (modContainer.isPresent()) {
             return modContainer.get().getMetadata().getVersion().getFriendlyString();
         } else {
             // Try to get the mod ID from the namespace.
             String modID = namespaceModIDMap.get(namespace);
-            if(modID != null) {
+            if (modID != null) {
                 Optional<ModContainer> container = FabricLoader.getInstance().getModContainer(modID);
-                if(container.isPresent()) {
+                if (container.isPresent()) {
                     return container.get().getMetadata().getVersion().getFriendlyString();
                 }
             }
@@ -49,13 +49,13 @@ public class NamespaceHelper implements PreLaunchEntrypoint {
         Gson gson = new Gson();
         try {
             Files.walk(modsFolder).filter(Files::isRegularFile).forEach(path -> {
-                if(path.toString().endsWith(".jar")) {
+                if (path.toString().endsWith(".jar")) {
                     // Enter jar resources.
                     AtomicReference<String> modID = new AtomicReference<>(null);
                     Set<String> namespaces = new HashSet<>();
                     try (ZipFile zipFile = new ZipFile(path.toFile())) {
                         zipFile.stream().forEach(entry -> {
-                            if(entry.getName().endsWith("fabric.mod.json")) {
+                            if (entry.getName().endsWith("fabric.mod.json")) {
                                 try {
                                     var reader = new InputStreamReader(zipFile.getInputStream(entry));
                                     JsonObject object = gson.fromJson(reader, JsonObject.class);
@@ -69,11 +69,11 @@ public class NamespaceHelper implements PreLaunchEntrypoint {
                             }
 
                             // Get all namespaces: all directories in the jar's assets folder.
-                            if(entry.getName().startsWith("assets/")) {
+                            if (entry.getName().startsWith("assets/")) {
                                 String[] namespacePath = entry.getName().split("/");
 
-                                if(namespacePath.length < 2) return;
-                                if(namespacePath[1].isBlank()) return;
+                                if (namespacePath.length < 2) return;
+                                if (namespacePath[1].isBlank()) return;
 
                                 namespaces.add(namespacePath[1]);
                             }
@@ -84,10 +84,10 @@ public class NamespaceHelper implements PreLaunchEntrypoint {
 
                     namespaces.remove("minecraft");
 
-                    if(modID.get() == null) {
+                    if (modID.get() == null) {
                         LOGGER.warn("Failed to read fabric.mod.json from " + path);
                     } else {
-                        if(namespaces.isEmpty()) {
+                        if (namespaces.isEmpty()) {
                             LOGGER.warn("No namespaces found for mod " + modID.get());
                         } else {
                             LOGGER.info("Found " + namespaces.size() + " namespaces for mod " + modID.get() + ": " + Arrays.toString(namespaces.toArray()));

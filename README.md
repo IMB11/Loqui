@@ -4,7 +4,9 @@ The goal of Loqui is to provide free, open-source, and community-driven translat
 
 The main benefit of Loqui is that mod developers can get their mods translated into multiple languages for free, without having to manually manage translations - Loqui allows mod developers to download any completed translations and bundle them directly into their mods!
 
-Loqui supports both Fabric and Forge mods, and is designed to be as easy to use as possible. It supports versioning, so if a mod changes its translation keys, Loqui will automatically manage the translations for each version.
+Loqui supports all Fabric mods, and is designed to be as easy to use as possible. It supports versioning, so if a mod changes its translation keys, Loqui will automatically manage the translations for each version.
+
+*A NeoForge port is planned, but the current goal is to smooth out any significant bugs and issues that may happen.*
 
 **Loqui is currently in development and is not yet ready for production use.**
 
@@ -44,9 +46,10 @@ This has been debated quite a bit, and the consensus is that translation files a
 
 ## Installation
 
-The eventual goal of Loqui is to be cross-platform and cross-version, currently it is on `1.20.1` for Fabric for debugging purposes. Once the mod is stable, it will be ported to NeoForge and Forge for as many versions as possible.
+Loqui is available for Fabric 1.19.4 to 1.20.4 - it is not available for NeoForge yet as mentioned above.
 
-*Loqui is not yet ready for production use.*
+- Modrinth: https://modrinth.com/mod/loqui
+- CurseForge: https://www.curseforge.com/minecraft/mc-mods/loqui
 
 ## Opt-out
 

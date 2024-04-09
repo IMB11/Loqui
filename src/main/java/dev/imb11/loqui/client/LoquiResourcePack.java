@@ -4,13 +4,11 @@ import com.google.common.base.Charsets;
 import dev.imb11.loqui.client.cache.CacheManager;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.SharedConstants;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.AbstractPackResources;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.metadata.MetadataSectionSerializer;
-import net.minecraft.server.packs.metadata.pack.PackMetadataSection;
 import net.minecraft.server.packs.resources.IoSupplier;
 import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
@@ -78,7 +76,7 @@ public class LoquiResourcePack implements PackResources {
                 .map(file -> new ResourceLocation(namespace, path + "/" + file))
                 .toList();
 
-        for(ResourceLocation result : resultList) {
+        for (ResourceLocation result : resultList) {
             resourceOutput.accept(result, getResource(packType, result));
         }
     }
@@ -108,7 +106,8 @@ public class LoquiResourcePack implements PackResources {
     }
 
     @Override
-    public void close() {}
+    public void close() {
+    }
 
     @Override
     public boolean isBuiltin() {
