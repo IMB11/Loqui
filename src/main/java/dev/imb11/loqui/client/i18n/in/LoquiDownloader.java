@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import static dev.imb11.loqui.client.Loqui.API_ROOT;
+
 public class LoquiDownloader {
     private static final Logger LOGGER = LoggerFactory.getLogger("LoquiDownloader");
     public ArrayList<LanguageRequest> requests = new ArrayList<>();
@@ -48,7 +50,7 @@ public class LoquiDownloader {
             String body = new Gson().toJson(requests);
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:9182/bulk-get"))
+                    .uri(URI.create(API_ROOT + "/bulk-get"))
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .header("Content-Type", "application/json")
                     .header("User-Agent", "Loqui Mod")

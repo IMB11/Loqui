@@ -316,6 +316,14 @@ export function tryGetEntry(config: CrowdinConfig, namespace: string, version: s
     // Read the file.
     if (existsSync(filePath)) {
       return readFileSync(filePath, "utf8");
+    } else {
+      // If the language code is two letters, it may be xx-XX.json instead!
+      const langFix = requestedLanguage + "-" + requestedLanguage.toUpperCase();
+      const filePath2 = join(OUTPUT_FOLDER, groupName, namespace, version, `${langFix}.json`);
+
+      if (existsSync(filePath2)) {
+        return readFileSync(filePath2, "utf8");
+      }
     }
   } catch {}
 

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": "true",
   "scripts": {
-    "dev": "ts-node --cwdMode ./src/index.ts"
+    "dev": "ts-node-esm --cwdMode ./src/index.ts"
   },
   "devDependencies": {
     "@types/body-parser": "^1.19.2",
