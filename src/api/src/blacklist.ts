@@ -14,5 +14,6 @@ export default [
   "fantasyfurniture_bone",
   "fantasyfurniture_royal",
   "fantasyfurniture_necrolord",
-  "entityviewdistance"
+  "entityviewdistance",
+  "skyblocker"
 ]
