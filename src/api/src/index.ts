@@ -45,6 +45,11 @@ interface UploadRequest {
   const readonlyGit = simpleGit("./repo_readonly");
   const app = express.default();
 
+  await git.pull();
+  await readonlyGit.pull();
+
+  await crowdin.removeBlacklistedNamespaces();
+
   app.use(json({limit: '5mb'}));
 
   app.post("/bulk-get", rateLimit({
@@ -198,6 +203,9 @@ interface UploadRequest {
 
     res.status(200).send({ status: "ok", groups: crowdinConfig.files.length });
   });
+
+  app.set('trust proxy', 1)
+  app.get('/ip', (request, response) => response.send(request.ip + " - THIS IS FOR TESTING THE CLOUDFLARE TUNNEL, DO NOT USE THIS IN PRODUCTION."))
 
   app.listen(config.port_number, () => {
     console.log("Server is running on port " + config.port_number);

@@ -4,6 +4,7 @@ import { join, resolve } from "path";
 import { convertLanguageCode, convertLanguageCodes } from "./lang";
 import sanitize from "sanitize-filename";
 import { globSync } from "glob";
+import blacklist from "./blacklist";
 
 const TRANSLATION_PATH = "/%original_path%/%file_name%/%locale%.json";
 const REPO_FOLDER = resolve(__dirname, "..", "repo");
@@ -61,6 +62,66 @@ export function loadConfig(): CrowdinConfig {
   }
 
   return YAML.load(readFileSync(CROWDIN_CONFIG_PATH, "utf8")) as CrowdinConfig;
+}
+
+export async function removeBlacklistedNamespaces(): Promise<void> {
+  const config = loadConfig();
+  // 1. Remove any namespaces that are blacklisted from /group_**/<namespace>
+  // 2. Edit the group_index.json file to remove any blacklisted namespaces
+  // 3. Remove any empty groups from the config
+  const groupIndex = JSON.parse(readFileSync(join(REPO_FOLDER, "group_index.json"), "utf8")) as RootIndex;
+
+  for (const namespace of blacklist) {
+    for (const version in groupIndex[namespace]) {
+      const groupName = groupIndex[namespace][version];
+      const groupPath = join(REPO_FOLDER, groupName, namespace);
+
+      console.log("Removing blacklisted namespace!")
+      console.log(groupPath);
+
+      if (existsSync(groupPath)) {
+        rmSync(groupPath, { recursive: true });
+      }
+
+      // Remove from readonly too!
+      const groupPathReadonly = join(OUTPUT_FOLDER, groupName, namespace);
+      if (existsSync(groupPathReadonly)) {
+        rmSync(groupPathReadonly, { recursive: true });
+      }
+
+      delete groupIndex[namespace][version];
+    }
+  }
+
+  // Remove empty groups from the config.
+  config.files = config.files.filter(group => {
+    const groupName = group.source.replace("/*/*.json", "");
+    const groupPath = join(REPO_FOLDER, groupName);
+
+    if (readdirSync(groupPath).length === 0) {
+      console.log("Removed " + groupName + " from config!")
+      rmSync(groupPath, { recursive: true });
+      return false;
+    }
+
+    // Remove from readonly too.
+    const groupPathReadonly = join(OUTPUT_FOLDER, groupName);
+
+    if(existsSync(groupPathReadonly)) {
+      if (readdirSync(groupPathReadonly).length === 0) {
+        console.log("Removed " + groupName + " from readonly!")
+        rmSync(groupPathReadonly, { recursive: true });
+        return false;
+      }
+    }
+    
+
+    return true;
+  });
+
+  saveConfig(config);
+
+  return;
 }
 
 function saveConfig(config: CrowdinConfig) {
