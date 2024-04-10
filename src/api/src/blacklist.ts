@@ -15,5 +15,6 @@ export default [
   "fantasyfurniture_royal",
   "fantasyfurniture_necrolord",
   "entityviewdistance",
-  "skyblocker"
+  "skyblocker",
+  "sodium"
 ]
