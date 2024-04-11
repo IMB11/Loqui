@@ -12,7 +12,7 @@ public class Loqui implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         if(FabricLoader.getInstance().isDevelopmentEnvironment()) {
-//            API_ROOT = "http://localhost:9182";
+            API_ROOT = "http://localhost:9182";
         }
 
         ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new LoquiReloadListener());

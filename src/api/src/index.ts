@@ -45,10 +45,11 @@ interface UploadRequest {
   const readonlyGit = simpleGit("./repo_readonly");
   const app = express.default();
 
-  await git.pull();
-  await readonlyGit.pull();
+  await git.pull("origin", "main");
+  await readonlyGit.pull("origin", "output");
 
   await crowdin.removeBlacklistedNamespaces();
+  // await crowdin.migrate();
 
   app.use(json({limit: '5mb'}));
 
@@ -58,11 +59,13 @@ interface UploadRequest {
     standardHeaders: true,
   }), async (req, res) => {
     const body = req.body;
+    const startTime = Date.now();
 
     // Expect an array of:
     // { namespace: string, version: string, requiredLanguages: string[] }
 
     if (!Array.isArray(body)) {
+      console.log("Processed bulk-get in " + (Date.now() - startTime) + "ms. [invalid]");
       res.status(400).send({
         error:
           "Invalid request - expected array of valid namespace request objects.",
@@ -76,6 +79,7 @@ interface UploadRequest {
         !namespaceObject.version ||
         !namespaceObject.requiredLanguages
       ) {
+        console.log("Processed bulk-get in " + (Date.now() - startTime) + "ms. [invalid]");
         res.status(400).send({
           error:
             "Invalid request - expected array of valid namespace request objects.",
@@ -84,13 +88,26 @@ interface UploadRequest {
       }
     }
 
-    await readonlyGit.pull();
+    await readonlyGit.pull("origin", "output");
 
     // Return an array of:
     const responses: DownloadResponse[] = [];
     const crowdinConfig = crowdin.loadConfig();
+    const hashmap = crowdin.loadHashmap();
 
     for (const namespaceObject of body) {
+
+      const namespaceHashes = hashmap[namespaceObject.namespace];
+
+      if (!namespaceHashes) {
+        continue;
+      }
+
+      const versionHash = namespaceHashes[namespaceObject.version];
+
+      if (!versionHash) {
+        continue;
+      }
 
       const response: DownloadResponse = {
         namespace: namespaceObject.namespace,
@@ -98,8 +115,10 @@ interface UploadRequest {
         contents: {}
       };
 
+
       for (const lang of namespaceObject.requiredLanguages) {
-        const data = crowdin.tryGetEntry(crowdinConfig, namespaceObject.namespace, namespaceObject.version, lang);
+        const data = crowdin.tryGetEntry(crowdinConfig, namespaceObject.namespace, versionHash, namespaceObject.version, lang);
+
         if (data) {
           response.contents[lang] = data;
         }
@@ -108,6 +127,7 @@ interface UploadRequest {
       responses.push(response);
     }
 
+    console.log(`Processed bulk-get in ${Date.now() - startTime}ms.`);
     return res.status(200).send(responses);
   });
 
@@ -120,11 +140,12 @@ interface UploadRequest {
 
     // Process the next submission in the queue.
     const submission = submissionQueue.shift();
+    const hashmap = crowdin.loadHashmap();
 
     if (submission && !isProcessing) {
       isProcessing = true;
 
-      await git.pull();
+      await git.pull("origin", "main");
       const crowdinConfig = crowdin.loadConfig();
 
       for (const namespaceObject of submission) {
@@ -132,14 +153,33 @@ interface UploadRequest {
           continue;
         }
 
-        crowdin.addEntry(crowdinConfig, namespaceObject.namespace, namespaceObject.version, namespaceObject.contents, namespaceObject.excludedLanguages);
+        let namespaceHash = hashmap[namespaceObject.namespace];
+
+        if (!namespaceHash) {
+          hashmap[namespaceObject.namespace] = {};
+          namespaceHash = hashmap[namespaceObject.namespace];
+        }
+
+        let versionHash = namespaceHash[namespaceObject.version];
+
+        if (versionHash) {
+          continue;
+        } else {
+          // Generate hash
+          namespaceHash[namespaceObject.version] = crowdin.generateHash(namespaceObject.contents);
+          versionHash = namespaceHash[namespaceObject.version];
+          hashmap[namespaceObject.namespace] = namespaceHash;
+          crowdin.saveHashmap(hashmap);
+        }
+
+        crowdin.addEntry(crowdinConfig, namespaceObject.namespace, versionHash, namespaceObject.contents, namespaceObject.excludedLanguages);
       }
 
       crowdin.optimizeConfig(crowdinConfig);
 
       await git.add("*");
 
-      await git.commit("New Submission(s) from API.")
+      await git.commit("New Submission(s) from API [auto]");
 
       await git.push("origin", "main");
 

@@ -1,5 +1,6 @@
-import { cpSync, exists, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, write, writeFileSync } from "fs";
+import { cpSync, exists, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, write, writeFile, writeFileSync } from "fs";
 import * as YAML from "js-yaml";
+import { createHash } from "crypto";
 import { join, resolve } from "path";
 import { convertLanguageCode, convertLanguageCodes } from "./lang";
 import sanitize from "sanitize-filename";
@@ -62,6 +63,71 @@ export function loadConfig(): CrowdinConfig {
   }
 
   return YAML.load(readFileSync(CROWDIN_CONFIG_PATH, "utf8")) as CrowdinConfig;
+}
+
+interface HashIndexData {
+  [namespace: string]: {
+    [version: string]: string;
+  }
+}
+
+export function loadHashmap(): HashIndexData {
+  if (!existsSync(join(REPO_FOLDER, "hashmap.json"))) {
+    return {};
+  }
+
+  return JSON.parse(readFileSync(join(REPO_FOLDER, "hashmap.json"), "utf8")) as HashIndexData;
+}
+
+export function saveHashmap(hashmap: HashIndexData) {
+  writeFileSync(join(REPO_FOLDER, "hashmap.json"), JSON.stringify(hashmap), "utf8");
+}
+
+export function generateHash(content: string): string {
+  return createHash("sha256").update(content).digest("hex");
+}
+
+export async function migrate() {
+  // Migrate to use the hash of the version.json language file as the version instead of the version string.
+  const config = loadConfig();
+  const groupIndex = JSON.parse(readFileSync(join(REPO_FOLDER, "group_index.json"), "utf8")) as RootIndex;
+
+  const newGroupIndex: RootIndex = {};
+  const hashIndex: HashIndexData = {};
+
+  for (const namespace in groupIndex) {
+    for (const version in groupIndex[namespace]) {
+      const groupName = groupIndex[namespace][version];
+      const groupPath = join(REPO_FOLDER, groupName, namespace, version + ".json");
+
+      const hash = createHash("sha256").update(readFileSync(groupPath, "utf8")).digest("hex");
+
+      hashIndex[namespace] = hashIndex[namespace] ?? {};
+      hashIndex[namespace][version] = hash;
+
+      const newGroupPath = join(REPO_FOLDER, groupName, namespace, hash + ".json");
+      
+      cpSync(groupPath, newGroupPath);
+      rmSync(groupPath);
+
+      // Update group index.
+      newGroupIndex[namespace] = newGroupIndex[namespace] ?? {};
+      newGroupIndex[namespace][hash] = groupName;
+
+      // Also migrate repo_readonly, move any translated files to the new hash.
+      const groupPathReadonly = join(OUTPUT_FOLDER, groupName, namespace, version + "/");
+      const newGroupPathReadonly = join(OUTPUT_FOLDER, groupName, namespace, hash + "/");
+
+      if (existsSync(groupPathReadonly)) {
+        cpSync(groupPathReadonly, newGroupPathReadonly, { recursive: true });
+        rmSync(groupPathReadonly, { recursive: true });
+      }
+    }
+  }
+
+  await writeFileSync(join(REPO_FOLDER, "hashmap.json"), JSON.stringify(hashIndex), "utf8");
+
+  saveConfig(config);
 }
 
 export async function removeBlacklistedNamespaces(): Promise<void> {
@@ -152,6 +218,8 @@ function saveConfig(config: CrowdinConfig) {
     rmSync(join(REPO_FOLDER, "group_index.json"));
   }
 
+  let hashmap = loadHashmap();
+
   for (const group of config.files) {
     const groupName = group.source.replace("/*/*.json", "");
 
@@ -161,17 +229,17 @@ function saveConfig(config: CrowdinConfig) {
       // Last two parts of the path are the namespace and version (-json)
       const parts = file.split("/");
       const namespace = parts[parts.length - 2].replace("/", "");
-      const version = parts[parts.length - 1].replace(".json", "");
+      const versionHash = parts[parts.length - 1].replace(".json", "");
 
       if (groupIndex[namespace] === undefined) {
         groupIndex[namespace] = {};
       }
 
-      groupIndex[namespace][version] = groupName;
+      groupIndex[namespace][versionHash] = groupName;
     }
   }
 
-  writeFileSync(join(REPO_FOLDER, "group_index.json"), JSON.stringify(groupIndex, null, 2), "utf8");
+  writeFileSync(join(REPO_FOLDER, "group_index.json"), JSON.stringify(groupIndex), "utf8");
 }
 
 // Creates a new group folder, and returns the path to the new group.
@@ -356,7 +424,7 @@ export function optimizeConfig(config: CrowdinConfig) {
  * @param requestedLanguage The language code of the requested language.
  * @returns The content of the language file, or undefined if the file does not exist.
  */
-export function tryGetEntry(config: CrowdinConfig, namespace: string, version: string, requestedLanguage: string): string | undefined {
+export function tryGetEntry(config: CrowdinConfig, namespace: string, hash: string, version: string, requestedLanguage: string): string | undefined {
   namespace = sanitize(namespace, { replacement: "_" });
   version = sanitize(version, { replacement: "_" });
 
@@ -369,10 +437,10 @@ export function tryGetEntry(config: CrowdinConfig, namespace: string, version: s
   try {
     const groupIndex = JSON.parse(readFileSync(join(REPO_FOLDER, "group_index.json"), "utf8")) as RootIndex;
     const namespaceIndex = groupIndex[namespace];
-    const groupName = namespaceIndex[version];
+    const groupName = namespaceIndex[hash];
 
     // Get file from the group.
-    const filePath = join(OUTPUT_FOLDER, groupName, namespace, version, `${requestedLanguage}.json`);
+    const filePath = join(OUTPUT_FOLDER, groupName, namespace, hash, `${requestedLanguage}.json`);
 
     // Read the file.
     if (existsSync(filePath)) {
@@ -380,7 +448,7 @@ export function tryGetEntry(config: CrowdinConfig, namespace: string, version: s
     } else {
       // If the language code is two letters, it may be xx-XX.json instead!
       const langFix = requestedLanguage + "-" + requestedLanguage.toUpperCase();
-      const filePath2 = join(OUTPUT_FOLDER, groupName, namespace, version, `${langFix}.json`);
+      const filePath2 = join(OUTPUT_FOLDER, groupName, namespace, hash, `${langFix}.json`);
 
       if (existsSync(filePath2)) {
         return readFileSync(filePath2, "utf8");
