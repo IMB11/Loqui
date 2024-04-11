@@ -48,6 +48,10 @@ export interface RootIndex {
   };
 }
 
+export function loadIndex(): RootIndex {
+  return JSON.parse(readFileSync(join(REPO_FOLDER, "group_index.json"), "utf8")) as RootIndex;
+}
+
 export interface CrowdinConfig {
   files: CrowdinFile[]
 }
@@ -424,7 +428,7 @@ export function optimizeConfig(config: CrowdinConfig) {
  * @param requestedLanguage The language code of the requested language.
  * @returns The content of the language file, or undefined if the file does not exist.
  */
-export function tryGetEntry(config: CrowdinConfig, namespace: string, hash: string, version: string, requestedLanguage: string): string | undefined {
+export function tryGetEntry(groupIndex: RootIndex,config: CrowdinConfig, namespace: string, hash: string, version: string, requestedLanguage: string): string | undefined {
   namespace = sanitize(namespace, { replacement: "_" });
   version = sanitize(version, { replacement: "_" });
 
@@ -435,7 +439,6 @@ export function tryGetEntry(config: CrowdinConfig, namespace: string, hash: stri
   }
 
   try {
-    const groupIndex = JSON.parse(readFileSync(join(REPO_FOLDER, "group_index.json"), "utf8")) as RootIndex;
     const namespaceIndex = groupIndex[namespace];
     const groupName = namespaceIndex[hash];
 

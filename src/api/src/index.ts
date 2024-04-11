@@ -90,9 +90,9 @@ interface UploadRequest {
 
     await readonlyGit.pull("origin", "output");
 
-    // Return an array of:
     const responses: DownloadResponse[] = [];
     const crowdinConfig = crowdin.loadConfig();
+    const rootIndex = crowdin.loadIndex();
     const hashmap = crowdin.loadHashmap();
 
     for (const namespaceObject of body) {
@@ -115,9 +115,8 @@ interface UploadRequest {
         contents: {}
       };
 
-
       for (const lang of namespaceObject.requiredLanguages) {
-        const data = crowdin.tryGetEntry(crowdinConfig, namespaceObject.namespace, versionHash, namespaceObject.version, lang);
+        const data = crowdin.tryGetEntry(rootIndex, crowdinConfig, namespaceObject.namespace, versionHash, namespaceObject.version, lang);
 
         if (data) {
           response.contents[lang] = data;
