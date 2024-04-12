@@ -46,14 +46,6 @@ Loqui has an intelligent algorithm that allows translations to be accurate acros
 6. When the Loqui mod requests translations, it will download the translations from the API and apply them to the game.
     1. Only the translations for the mods installed (taking into account versions and what translations exist locally) will be downloaded.
 
-## What About Licenses?
-
-- **Translation files aren't protected by copyright:** The en_us.json files, which contain language data, aren't considered creative works and don't fall under typical copyright protection.
-- **Translation files are meant for modification:** Their purpose is to be edited and changed to provide translations for different languages. This intended use implies that they can be redistributed as part of that process.
-- **Loqui's actions are distinct from intellectual property theft:** The process Loqui uses doesn't involve extracting copyrighted assets like textures or sounds from mods. It focuses solely on the language files, which have a different legal standing.
-
-*If you feel that your mod's translations should not be crowd-sourced, you can opt-out of Loqui by adding a `noloqui.txt` file to your mod's assets or contacting me directly for any stronger measures.*
-
 ## Opt-out
 
 Opting out can be useful if:
