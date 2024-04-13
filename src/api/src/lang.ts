@@ -28,8 +28,6 @@ add("en_nz", "en-NZ");
 add("en_pt", "en-PT");
 add("en_ud", "en-UD");
 add("en_us", "en-US");
-add("en_ws", "en-WS");
-add("en_7s", "en-PT");
 add("en_ud", "en-UD");
 add("eo_uy", "eo");
 add("es_ar", "es-AR");
