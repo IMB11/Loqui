@@ -5,6 +5,12 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@lokalise/node-api':
+    specifier: ^12.4.0
+    version: 12.4.0
+  '@types/lokijs':
+    specifier: ^1.5.14
+    version: 1.5.14
   '@types/semver':
     specifier: ^7.5.0
     version: 7.5.0
@@ -26,12 +32,18 @@ dependencies:
   js-yaml:
     specifier: ^4.1.0
     version: 4.1.0
+  lokijs:
+    specifier: ^1.5.12
+    version: 1.5.12
   sanitize-filename:
     specifier: ^1.6.3
     version: 1.6.3
   simple-git:
     specifier: ^3.24.0
     version: 3.24.0
+  tslog:
+    specifier: ^4.9.2
+    version: 4.9.2
   typescript:
     specifier: ^5.1.6
     version: 5.1.6
@@ -338,6 +350,11 @@ packages:
     resolution: {integrity: sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==}
     dev: false
 
+  /@lokalise/node-api@12.4.0:
+    resolution: {integrity: sha512-mZE/pPpT+FqmCBbPv3U5rmImbv7Mcgk3k+GrMurlvM9Ck5iUJ4adjaxDV1jFFuGDpR/hLatEU9jSuH1ut20FHQ==}
+    engines: {node: '>=18'}
+    dev: false
+
   /@nodelib/fs.scandir@2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
     engines: {node: '>= 8'}
@@ -558,6 +575,10 @@ packages:
   /@types/js-yaml@4.0.9:
     resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
     dev: true
+
+  /@types/lokijs@1.5.14:
+    resolution: {integrity: sha512-4Fic47BX3Qxr8pd12KT6/T1XWU8dOlJBIp1jGoMbaDbiEvdv50rAii+B3z1b/J2pvMywcVP+DBPGP5/lgLOKGA==}
+    dev: false
 
   /@types/mime@1.3.5:
     resolution: {integrity: sha512-/pyBZWSLD2n0dcHE3hq8s8ZvcETHtEuF+3E7XVt0Ig2nvsVQXdghHVcEkIWjy9A0wKfTn97a/PSDYohKIlnP/w==}
@@ -1206,6 +1227,10 @@ packages:
     resolution: {integrity: sha512-HDWXG8isMntAyRF5vZ7xKuEvOhT4AhlRt/3czTSjvGUxjYCBVRQY48ViDHyfYz9VIoBkW4TMGQNapx+l3RUwdA==}
     dev: true
 
+  /lokijs@1.5.12:
+    resolution: {integrity: sha512-Q5ALD6JiS6xAUWCwX3taQmgwxyveCtIIuL08+ml0nHwT3k0S/GIFJN+Hd38b1qYIMaE5X++iqsqWVksz7SYW+Q==}
+    dev: false
+
   /lru-cache@10.2.0:
     resolution: {integrity: sha512-2bIM8x+VAf6JT4bKAljS1qUWgMsqZRPGJS6FSahIMPVvctcNhyVp7AJu7quxOW9jwkryBReKZY5tY5JYv2n/7Q==}
     engines: {node: 14 || >=16.14}
@@ -1690,6 +1715,11 @@ packages:
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
     dev: true
+
+  /tslog@4.9.2:
+    resolution: {integrity: sha512-wBM+LRJoNl34Bdu8mYEFxpvmOUedpNUwMNQB/NcuPIZKwdDde6xLHUev3bBjXQU7gdurX++X/YE7gLH8eXYsiQ==}
+    engines: {node: '>=16'}
+    dev: false
 
   /tsup@8.0.2(ts-node@10.9.1)(typescript@5.1.6):
     resolution: {integrity: sha512-NY8xtQXdH7hDUAZwcQdY/Vzlw9johQsaqf7iwZ6g1DOUlFYQ5/AtVAjTvihhEyeRlGo4dLRVHtrRaL35M1daqQ==}

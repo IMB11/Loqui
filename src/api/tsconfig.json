@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "Node10",
+    "module": "node16", 
+    "moduleResolution": "node16",
     "removeComments": true,
     "preserveConstEnums": true,
     "outDir": "./dist",
