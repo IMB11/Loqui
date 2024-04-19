@@ -1,33 +1,25 @@
 import * as express from "express";
-import loki from "lokijs";
 import rateLimit from "express-rate-limit";
 import bodyParser from "body-parser";
 const { json } = bodyParser;
 
-import { readFileSync } from "node:fs";
 import { LokaliseApi } from "@lokalise/node-api";
 import { submitTranslationRequest } from "./requests/submission.js";
-import * as hashDB from "./data/hash-database.js";
+import logger from "./logger.js";
+import { db } from "./data/persistence.js";
+import { config } from "./config.js";
 
-const db = new loki("loqui.db", {
-  persistenceMethod: "fs",
-  autoload: true,
-	autosave: true, 
-	autosaveInterval: 4000
-});
-const config = JSON.parse(readFileSync(".secrets.json", "utf-8"));
 const project_id = config.lokalise_project_id;
 const lokalise = new LokaliseApi({
-  apiKey: config.lokalise_api_key
+  apiKey: config.lokalise_api_key,
+  enableCompression: true
 });
 
-hashDB.setup(db);
+db.authenticate();
 
-console.log("Starting server...");
+logger.info("Starting server...");
 
 (async () => {
-  const project = await lokalise.projects().get(project_id);
-
   const app = express.default();
 
   app.use(json({ limit: '5mb' }));
@@ -78,6 +70,6 @@ console.log("Starting server...");
   app.set('trust proxy', 1)
 
   app.listen(config.port_number, () => {
-    console.log("Server is running on port " + config.port_number);
+    logger.info("Server is running on port " + config.port_number);
   });
 })();

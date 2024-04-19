@@ -1,9 +1,57 @@
 import { Request, Response } from "express";
-import Submission, { getBaseLocaleHash } from "../data/submission.js";
-import { LokaliseApi } from "@lokalise/node-api";
-import { addHash } from "../data/hash-database.js";
+import Submission, { getBaseLocaleHash, getModrinthFile } from "../data/submission.js";
+import { LokaliseApi, QueuedProcess } from "@lokalise/node-api";
+import { addHash, Hash } from "../data/persistence.js";
+import manageDuplicates from "../processes/duplicates.js";
+import logger from "../logger.js";
+import { reversedMappings } from "../lang_map.js";
+import _ from "lodash";
 
-export async function submitTranslationRequest(lokalise: LokaliseApi, project_id: string, req:  Request, res: Response) {
+function delay(milliseconds) {
+  return new Promise(resolve => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+// Exclude file languages.
+async function excludeFileLanguages(lokalise: LokaliseApi, project_id: string, table: { [filename: string]: string[] }, modrinthTable: { [filename: string]: string | undefined}) {
+  for (const filename of Object.keys(table)) {
+    let languages = table[filename];
+
+    languages = _.filter(languages, lang => {
+      return lang !== "en_us"
+    })
+
+    const keys = await lokalise.keys().list({ limit: 5000, project_id, filter_filenames: filename });
+
+    let keyData = [];
+    for (const key of keys.items) {
+      const data = {
+        key_id: key.key_id,
+        translations: languages.map(lang => ({
+          language_iso: `${reversedMappings[lang]}`,
+          translation: "[VOID]",
+          is_reviewed: true,
+          is_unverified: false,
+        }))
+      }
+
+      if(modrinthTable[filename]) {
+        data["description"] = modrinthTable[filename];
+      }
+
+      keyData.push(data);
+    }
+
+    await lokalise.keys().bulk_update({
+      keys: keyData,
+    }, {
+      project_id
+    })
+  }
+}
+
+export async function submitTranslationRequest(lokalise: LokaliseApi, project_id: string, req: Request, res: Response) {
   const body: Submission[] = req.body;
 
   // Validate body.
@@ -16,13 +64,17 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
   // Validate each submission.
   for (const submission of body) {
-    if (!submission.modid || !submission.jarHash || !submission.providedLocales || !submission.baseLocaleData || !submission.jarVersion) {
+    if (!submission.namespace || !submission.jarHash || !submission.providedLocales || !submission.baseLocaleData || !submission.jarVersion) {
       return res.status(400).send({
         message: "Each submission must have a modname, modid, jarHash, providedLocales, and baseLocaleData.",
         error: "invalid_submission"
       });
     }
   }
+
+  const processed: any[] = [];
+  const fileProcessed: { [filename: string]: string[] } = {};
+  const modrinthTable: { [filename: string]: string | undefined } = {};
 
   // Process each submission.
   for (const submission of body) {
@@ -62,29 +114,51 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
       });
     }
 
-    const hashSubmission = addHash(localeFileHash, submission.jarVersion);
+    const hashSubmission: Hash = addHash(submission.namespace, localeFileHash, submission.jarVersion);
 
-    if (hashSubmission === null) {
+    if (!hashSubmission) {
       continue;
     }
 
-    const filename = `${submission.modid}/${hashSubmission.modVersion}.json`;
+    logger.debug(`Processing submission for ${submission.namespace} - ${submission.jarVersion}`);
 
-    // Create the file.
-    const process = await lokalise.files().upload(project_id, {
-      data: Buffer.from(stringData).toString("base64"), 
-      filename: filename, 
+    const filename = `${submission.namespace}/${hashSubmission.jarVersion}.json`;
+
+    processed.push({
+      data: Buffer.from(stringData).toString("base64"),
+      filename: filename,
       lang_iso: "en",
-      apply_tm: true, 
-      format: "json", 
+      apply_tm: true,
+      format: "json",
       skip_detect_lang_iso: true,
       distinguish_by_file: true,
-      slashn_to_linebreak: true
-    })
+      convert_placeholders: false,
+      slashn_to_linebreak: true,
+    });
 
-    // Process the file.
-    return res.send({ processing: true });
+    fileProcessed[filename] = submission.providedLocales;
+
+    const modrinthData = await getModrinthFile(submission);
+
+    if(modrinthData) {
+      modrinthTable[filename] = `${modrinthData.name} - https://modrinth.com/mod/${modrinthData.project_id}`;
+    }
   }
+
+  // Call await lokalise.files().upload(project_id, processed_data); in parallel, then manage duplicates.
+  const promises: Promise<QueuedProcess>[] = processed.map((data) => {
+    logger.debug(`Uploading file ${data.filename}`);
+    return lokalise.files().upload(project_id, data);
+  });
+
+  Promise.all(promises).then(async () => {
+    await delay(5000); // Wait for Lokalise to process the files.
+    logger.debug("All files uploaded. Managing duplicates...");
+    await manageDuplicates(lokalise, project_id);
+    logger.debug("Duplicates managed. Excluding file languages...");
+    await excludeFileLanguages(lokalise, project_id, fileProcessed, modrinthTable);
+    logger.debug("File languages excluded.");
+  })
 
   res.send("ok");
 }

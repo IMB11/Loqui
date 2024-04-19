@@ -93,6 +93,7 @@ dist
 
 # Loqui API Secrets
 .secrets.json
+.data/**
 
 # Loqui Cache Repo
 ./repo/**
