@@ -10,9 +10,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Loqui implements PreLaunchEntrypoint {
     public static boolean HAS_REPORTED = false;
+    public static final ExecutorService LOQUI_IO_POOL = Executors.newFixedThreadPool(2);
+
     public static Logger LOGGER = LoggerFactory.getLogger("Loqui");
     public static String API_ROOT = "https://loqui.imb11.dev";
 

@@ -20,6 +20,6 @@
         "loqui.mixins.json"
     ],
     "depends": {
-        "minecraft": ">=1.19.4 <1.20.4"
+        "minecraft": ">=1.19.4 <=1.20.4"
     }
 }

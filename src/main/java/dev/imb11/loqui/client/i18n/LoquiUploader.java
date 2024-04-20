@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static dev.imb11.loqui.client.Loqui.LOQUI_IO_POOL;
+
 public class LoquiUploader {
     private static final Logger LOGGER = LoggerFactory.getLogger("Loqui/Uploader");
     private record UploadEntry(String namespace, String jarVersion, String jarHash, String[] providedLocales, String baseLocaleData) {}
@@ -39,6 +41,6 @@ public class LoquiUploader {
             }
 
             return null;
-        }, Util.ioPool());
+        }, LOQUI_IO_POOL);
     }
 }

@@ -90,14 +90,13 @@ public class LanguageIndexer {
 
                 indexEntries.add(new IndexEntry(modVersion, sha512, namespaceEntries.values().stream().toList()));
 
-                // Output all entries into console for debugging, pretty.
-//                namespaceEntries.forEach((namespace, entry) -> {
-//                    LOGGER.info("=====================================");
-//                    LOGGER.info("Namespace: " + namespace);
-//                    LOGGER.info("Provided locales: " + entry.providedLocales);
-//                    LOGGER.info("English locale content: " + entry.englishLocaleContent.getBytes().length + " bytes");
-//                });
-//                LOGGER.info("=====================================");
+                // Output all entries into console for debugging purposes, pretty.
+                namespaceEntries.forEach((namespace, entry) -> {
+                    LOGGER.info("=====================================");
+                    LOGGER.info("Namespace: " + namespace);
+                    LOGGER.info("Provided locales: " + entry.providedLocales);
+                    LOGGER.info("English locale content: " + entry.englishLocaleContent.getBytes().length + " bytes");
+                });
             } catch (IOException e) {
                 LOGGER.error("Failed to index file: " + mod.getName(), e);
             }

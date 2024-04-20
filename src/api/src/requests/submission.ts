@@ -92,18 +92,12 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
     try {
       translationData = JSON.parse(submission.baseLocaleData);
     } catch {
-      return res.status(400).send({
-        message: "baseLocaleData must be a valid JSON string.",
-        error: "invalid_base_locale_data"
-      });
+      continue;
     }
 
     // Verify that it's in [key: string]: string format.
     if (Object.keys(translationData).some(key => typeof translationData[key] !== "string")) {
-      return res.status(400).send({
-        message: "baseLocaleData must be in [key: string]: string format.",
-        error: "invalid_base_locale_data"
-      });
+      continue;
     }
 
     const stringData = submission.baseLocaleData;
@@ -117,10 +111,7 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
     });
 
     if (existingFile.items.length > 0) {
-      return res.status(409).send({
-        message: "A file with the same hash already exists in the project.",
-        error: "file_exists"
-      });
+      continue;
     }
 
     const hashSubmission: Hash = addHash(submission.namespace, localeFileHash, submission.providedLocales, submission.jarVersion);
@@ -157,7 +148,12 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
   // Call await lokalise.files().upload(project_id, processed_data); in parallel, then manage duplicates.
   const promises: Promise<QueuedProcess>[] = processed.map((data) => {
     logger.debug(`Uploading file ${data.filename}`);
-    return lokalise.files().upload(project_id, data);
+    try {
+      return lokalise.files().upload(project_id, data);
+    } catch (e) {
+      logger.error(`Error uploading file ${data.filename}: ${e}`);
+      return null;
+    }
   });
 
   Promise.all(promises).then(async () => {

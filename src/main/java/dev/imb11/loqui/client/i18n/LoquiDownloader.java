@@ -17,6 +17,7 @@ import java.io.InputStreamReader;
 import java.util.concurrent.CompletableFuture;
 
 import static dev.imb11.loqui.client.Loqui.API_ROOT;
+import static dev.imb11.loqui.client.Loqui.LOQUI_IO_POOL;
 
 public class LoquiDownloader {
     private static Logger LOGGER = LoggerFactory.getLogger("Loqui/Downloader");
@@ -33,6 +34,6 @@ public class LoquiDownloader {
             }
 
             return null;
-        }, Util.ioPool());
+        }, LOQUI_IO_POOL);
     }
 }
