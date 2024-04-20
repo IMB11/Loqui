@@ -15,9 +15,9 @@ function delay(milliseconds) {
 }
 
 // Exclude file languages.
-async function excludeFileLanguages(lokalise: LokaliseApi, project_id: string, table: { [filename: string]: string[] }, modrinthTable: { [filename: string]: string | undefined}) {
+async function excludeFileLanguages(lokalise: LokaliseApi, project_id: string, table: { [filename: string]: string[] }, modrinthTable: { [filename: string]: string | undefined }) {
   const language_isos: string[] = (await lokalise.languages().list({ project_id, limit: 500 })).items.map(lang => lang.lang_iso);
-  
+
   for (const filename of Object.keys(table)) {
     let languages = table[filename];
 
@@ -38,7 +38,7 @@ async function excludeFileLanguages(lokalise: LokaliseApi, project_id: string, t
         }))
       }
 
-      if(modrinthTable[filename]) {
+      if (modrinthTable[filename]) {
         data["description"] = modrinthTable[filename];
       }
 
@@ -78,11 +78,13 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
   const fileProcessed: { [filename: string]: string[] } = {};
   const modrinthTable: { [filename: string]: string | undefined } = {};
 
+  console.log(body);
+
   // Process each submission.
   for (const submission of body) {
     let namespace = submission.namespace;
 
-    if(blacklist.includes(namespace)) {
+    if (blacklist.includes(namespace)) {
       logger.info(`Skipping submission for ${namespace} due to blacklist.`);
       continue;
     }
@@ -140,29 +142,26 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
     const modrinthData = await getModrinthFile(submission);
 
-    if(modrinthData) {
+    if (modrinthData) {
       modrinthTable[filename] = `${modrinthData.name} - https://modrinth.com/mod/${modrinthData.project_id}`;
     }
   }
 
-  // Call await lokalise.files().upload(project_id, processed_data); in parallel, then manage duplicates.
-  const promises: Promise<QueuedProcess>[] = processed.map((data) => {
-    logger.debug(`Uploading file ${data.filename}`);
-    try {
-      return lokalise.files().upload(project_id, data);
-    } catch (e) {
-      logger.error(`Error uploading file ${data.filename}: ${e}`);
-      return null;
-    }
-  });
-
-  Promise.all(promises).then(async () => {
-    await delay(5000); // Wait for Lokalise to process the files.
-    logger.debug("Excluding file languages...");
-    await excludeFileLanguages(lokalise, project_id, fileProcessed, modrinthTable);
-    logger.debug("Managing duplicates...");
-    await manageDuplicates(lokalise, project_id);
-  })
-
   res.send("ok");
+
+  for (const process of processed) {
+    try {
+      logger.debug(`Uploading file ${process.filename}`);
+      await lokalise.files().upload(project_id, process);
+      await delay(1000 / 5) // Max 5 per second.
+    } catch (e) {
+      logger.error(`Error uploading file ${process.filename}: ${e}`);
+    }
+  }
+
+  await delay(5000); // Wait for Lokalise to process the files.
+  logger.debug("Excluding file languages...");
+  await excludeFileLanguages(lokalise, project_id, fileProcessed, modrinthTable);
+  logger.debug("Managing duplicates...");
+  await manageDuplicates(lokalise, project_id);
 }

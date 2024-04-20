@@ -26,7 +26,7 @@ public abstract class LanguageSelectScreenMixin extends Screen {
             assert this.minecraft != null;
             ConfirmLinkScreen screen = new ConfirmLinkScreen((bl) -> {
                 if (bl) {
-                    Util.getPlatform().openUri("https://loqui.imb11/dev");
+                    Util.getPlatform().openUri("https://loqui.imb11.dev/");
                 } else {
 
                     this.minecraft.setScreen(this);

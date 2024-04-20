@@ -18,7 +18,7 @@ public class Loqui implements PreLaunchEntrypoint {
     public static final ExecutorService LOQUI_IO_POOL = Executors.newFixedThreadPool(2);
 
     public static Logger LOGGER = LoggerFactory.getLogger("Loqui");
-    public static String API_ROOT = "https://loqui.imb11.dev";
+    public static String API_ROOT = "http://localhost:9182";
 
     @Override
     public void onPreLaunch() {
