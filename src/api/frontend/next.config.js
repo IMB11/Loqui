@@ -5,7 +5,10 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  swcMinify: false
+  swcMinify: false,
+  experimental: {
+    forceSwcTransforms: false,
+  },
 }
 
 module.exports = nextConfig
