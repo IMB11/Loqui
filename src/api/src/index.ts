@@ -25,8 +25,8 @@ try {
   (async () => {
     const app = express.default();
   
-    const keys = await lokalise.keys().list({ project_id, limit: 5000 });
-    await lokalise.keys().bulk_delete(keys.items.map(key => key.key_id), { project_id })
+    // const keys = await lokalise.keys().list({ project_id, limit: 5000 });
+    // await lokalise.keys().bulk_delete(keys.items.map(key => key.key_id), { project_id })
   
     app.use(express.static("public"));
     app.use(json({ limit: '5mb' }));
