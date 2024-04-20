@@ -14,7 +14,7 @@ import java.io.IOException;
 public class Loqui implements PreLaunchEntrypoint {
     public static boolean HAS_REPORTED = false;
     public static Logger LOGGER = LoggerFactory.getLogger("Loqui");
-    public static String API_ROOT = "https://loqui-api.imb11.dev";
+    public static String API_ROOT = "https://loqui.imb11.dev";
 
     @Override
     public void onPreLaunch() {

@@ -6,6 +6,7 @@ import manageDuplicates from "../processes/duplicates.js";
 import logger from "../logger.js";
 import _ from "lodash";
 import { transformLocaleArray } from "../lang_map.js";
+import blacklist from "../blacklist.js";
 
 function delay(milliseconds) {
   return new Promise(resolve => {
@@ -79,6 +80,13 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
   // Process each submission.
   for (const submission of body) {
+    let namespace = submission.namespace;
+
+    if(blacklist.includes(namespace)) {
+      logger.info(`Skipping submission for ${namespace} due to blacklist.`);
+      continue;
+    }
+
     // Process submission.
     let translationData: Record<string, string>;
     try {

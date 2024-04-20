@@ -36,6 +36,14 @@ public class LanguageIndexer {
         assert mods != null;
         for (File mod : mods) {
             try (ZipFile zipFile = new ZipFile(mod)) {
+                // Check if .noloqui file exists (blacklist file)
+                ZipEntry noloquiFile = zipFile.getEntry(".noloqui");
+
+                if (noloquiFile != null) {
+                    LOGGER.info("Skipping " + mod.getName() + " as it is blacklisted.");
+                    continue;
+                }
+
                 var modDefinitionFile = zipFile.getEntry("fabric.mod.json");
                 if (modDefinitionFile == null) {
                     LOGGER.warn("Skipping " + mod.getName() + " as it does not have a fabric.mod.json file.");
@@ -53,6 +61,7 @@ public class LanguageIndexer {
                 Stream<? extends ZipEntry> zipEntries = zipFile.stream();
 
                 HashMap<String, NamespaceTranslationEntry> namespaceEntries = new HashMap<>();
+                
                 // Get all lang files that match **/assets/**/lang/*.json
                 zipEntries.filter(entry -> entry.getName().matches("(.+/)?assets/[^/]+/lang/[^/]+\\.json"))
                         .forEach(entry -> {
