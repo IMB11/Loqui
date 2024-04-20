@@ -4,7 +4,8 @@ const nextConfig = {
   distDir: "../public",
   images: {
     unoptimized: true
-  }
+  },
+  swcMinify: false
 }
 
 module.exports = nextConfig
