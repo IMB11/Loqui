@@ -21,8 +21,16 @@ async function excludeFileLanguages(lokalise: LokaliseApi, project_id: string, t
   for (const filename of Object.keys(table)) {
     let languages = table[filename];
 
+    logger.debug(`Excluding languages for ${filename}`);
+    logger.debug(languages.length === 0 ? "No languages to exclude." : `Excluding ${languages.length} languages.`)
+
+    if (languages.length === 0) {
+      continue;
+    }
+
     languages = transformLocaleArray(languages, language_isos, project_id);
     _.remove(languages, lang => lang === "en_us");
+    _.remove(languages, lang => !language_isos.includes(lang));
 
     const keys = await lokalise.keys().list({ limit: 5000, project_id, filter_filenames: filename, include_translations: 1 });
 
@@ -49,7 +57,8 @@ async function excludeFileLanguages(lokalise: LokaliseApi, project_id: string, t
       keys: keyData,
     }, {
       project_id
-    })
+    });
+    await delay(1000 / 6)
   }
 }
 
@@ -153,15 +162,21 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
     try {
       logger.debug(`Uploading file ${process.filename}`);
       await lokalise.files().upload(project_id, process);
-      await delay(1000 / 5) // Max 5 per second.
+      await delay(1000 / 6)
     } catch (e) {
       logger.error(`Error uploading file ${process.filename}: ${e}`);
     }
   }
 
-  await delay(5000); // Wait for Lokalise to process the files.
-  logger.debug("Excluding file languages...");
-  await excludeFileLanguages(lokalise, project_id, fileProcessed, modrinthTable);
-  logger.debug("Managing duplicates...");
-  await manageDuplicates(lokalise, project_id);
+  try {
+    await delay(1.25 * 60 * 1000);
+    logger.debug("Excluding file languages...");
+    await excludeFileLanguages(lokalise, project_id, fileProcessed, modrinthTable);
+    logger.debug("Managing duplicates...");
+    await manageDuplicates(lokalise, project_id);
+    logger.debug("Done managing duplicates.");
+  } catch (e) {
+    logger.error(`Error managing:`);
+    logger.error(e);
+  }
 }
