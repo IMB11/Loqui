@@ -94,9 +94,10 @@ dist
 # Loqui API Secrets
 .secrets.json
 .data/**
+/temp/**
 
 # Loqui Cache Repo
-./repo/**
+/repo/**
 ./repo_readonly/**
 
 # Gatsby files

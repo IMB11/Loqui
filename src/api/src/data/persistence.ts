@@ -45,17 +45,17 @@ export function addHash(namespace: string, localeFileHash: string, ignoredLocale
     }
   } else {
     // Check if hash with same jarVersion exists.
-    const existingHash = HashStorage.query().equalTo("jarVersion", jarVersion).first();
+    const existingHash = HashStorage.query().equalTo("jarVersion", jarVersion).equalTo("namespace", namespace).first();
 
     if(existingHash) {
       let newVersion = jarVersion;
       let index = 0;
-      while(HashStorage.query().equalTo("jarVersion", newVersion).first()) {
+      while(HashStorage.query().equalTo("jarVersion", newVersion).equalTo("namespace", namespace).first()) {
         index++;
         newVersion = `${jarVersion}_v${index}`;
       }
 
-      return HashStorage.insert({ namespace, jarVersion: newVersion, rootVersion: jarVersion, localeFileHash, ignoredLocales })
+      return HashStorage.insert({ namespace, jarVersion: newVersion, localeFileHash, ignoredLocales })
     }
 
     // Insert the hash.
@@ -67,7 +67,7 @@ export function getHashObject(localeFileHash: string): Hash | null {
   return HashStorage.query().equalTo("localeFileHash", localeFileHash).first();
 }
 
-export function getHashObjectByJarVersion(jarVersion: string): Hash | null {
+export function getHashObjectByJarVersion(namespace: string, jarVersion: string): Hash | null {
   // Check if rootVersion exists - and follow it.
-  return HashStorage.query().equalTo("jarVersion", jarVersion).first();
+  return HashStorage.query().equalTo("jarVersion", jarVersion).equalTo("namespace", namespace).first();
 }

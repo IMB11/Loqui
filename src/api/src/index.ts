@@ -8,6 +8,7 @@ import { submitTranslationRequest } from "./requests/submission.js";
 import logger from "./logger.js";
 import { db } from "./data/persistence.js";
 import { config } from "./config.js";
+import { download } from "./data/download.js";
 
 const project_id = config.lokalise_project_id;
 const lokalise = new LokaliseApi({
@@ -72,4 +73,13 @@ logger.info("Starting server...");
   app.listen(config.port_number, () => {
     logger.info("Server is running on port " + config.port_number);
   });
+
+  const language_isos = (await lokalise.languages().list({ project_id, limit: 500 })).items.map(lang => lang.lang_iso);
+
+  download(language_isos, project_id, lokalise);
+  
+  // Every hour.
+  setInterval(() => {
+    download(language_isos, project_id, lokalise);
+  }, 1000 * 60 * 60)
 })();

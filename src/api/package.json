@@ -24,17 +24,20 @@
   "dependencies": {
     "@lokalise/node-api": "^12.4.0",
     "@types/unzip": "^0.1.4",
+    "@types/unzipper": "^0.10.9",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "express-rate-limit": "^6.8.1",
     "fstream": "^1.0.12",
+    "glob": "^10.3.12",
     "js-file-downloader": "^1.1.25",
     "lodash": "^4.17.21",
     "neboa": "^0.6.1",
     "sanitize-filename": "^1.6.3",
     "tslog": "^4.9.2",
     "typescript": "^5.1.6",
-    "unzip": "^0.1.11"
+    "unzip": "^0.1.11",
+    "unzipper": "^0.11.3"
   }
 }
