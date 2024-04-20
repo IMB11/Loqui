@@ -7,9 +7,14 @@ export type Hash = {
   jarVersion: string;
   rootVersion?: string;
   localeFileHash?: string;
+  ignoredLocales: string[];
 }
 
 const HashStorage = db.collection<Hash>("hashStorage")
+
+export function getAllHashes(): Hash[] {
+  return HashStorage.query().find();
+}
 
 /**
  * Adds a hash to the database.
@@ -17,7 +22,7 @@ const HashStorage = db.collection<Hash>("hashStorage")
  * @param jarVersion The version of the mod - from fabric.mod.json or mods.toml
  * @returns The hash object if it was added, null if the hash already exists under the same version.
  */
-export function addHash(namespace: string, localeFileHash: string, jarVersion: string): Hash | null {
+export function addHash(namespace: string, localeFileHash: string, ignoredLocales: string[], jarVersion: string): Hash | null {
   // Check if hash is already in the database.
   const existingHash = HashStorage.query().equalTo("localeFileHash", localeFileHash).first();
 
@@ -30,7 +35,7 @@ export function addHash(namespace: string, localeFileHash: string, jarVersion: s
     // Check if jarVersion is equal - if it's not, make a new link entry using the rootVersion.
     if(existingHash.jarVersion !== jarVersion) {
       const rootVersion = existingHash.jarVersion;
-      HashStorage.insert({ namespace, jarVersion, rootVersion });
+      HashStorage.insert({ namespace, jarVersion, rootVersion, ignoredLocales });
 
       // Hash exists, but it's a different version - so ignore it.
       return null;
@@ -39,7 +44,30 @@ export function addHash(namespace: string, localeFileHash: string, jarVersion: s
       return null;
     }
   } else {
+    // Check if hash with same jarVersion exists.
+    const existingHash = HashStorage.query().equalTo("jarVersion", jarVersion).first();
+
+    if(existingHash) {
+      let newVersion = jarVersion;
+      let index = 0;
+      while(HashStorage.query().equalTo("jarVersion", newVersion).first()) {
+        index++;
+        newVersion = `${jarVersion}_v${index}`;
+      }
+
+      return HashStorage.insert({ namespace, jarVersion: newVersion, rootVersion: jarVersion, localeFileHash, ignoredLocales })
+    }
+
     // Insert the hash.
-    return HashStorage.insert({ namespace, jarVersion, localeFileHash });
+    return HashStorage.insert({ namespace, jarVersion, localeFileHash, ignoredLocales });
   }
+}
+
+export function getHashObject(localeFileHash: string): Hash | null {
+  return HashStorage.query().equalTo("localeFileHash", localeFileHash).first();
+}
+
+export function getHashObjectByJarVersion(jarVersion: string): Hash | null {
+  // Check if rootVersion exists - and follow it.
+  return HashStorage.query().equalTo("jarVersion", jarVersion).first();
 }

@@ -1,4 +1,5 @@
 import { Key, LokaliseApi } from "@lokalise/node-api";
+import { group } from "console";
 import _ from "lodash";
 
 let IS_LOCKED = false;
@@ -7,7 +8,7 @@ function findDuplicateObjects(array: Key[][]) {
   // Function to find duplicates within a chunk
   function findDuplicatesInChunk(chunk: Key[]) {
     const grouped = _.groupBy(chunk, obj => {
-      const enTranslation = _.find(obj.translations, { language_iso: 'en' });
+      const enTranslation = _.find(obj.translations, { language_iso: 'en_us' });
 
       if (enTranslation === undefined) {
         return `${obj.key_id}`
@@ -15,6 +16,7 @@ function findDuplicateObjects(array: Key[][]) {
 
       return `${obj.key_name}-${enTranslation.translation}`
     });
+
     const duplicates = _.filter(grouped, group => group.length > 1);
     return duplicates;
   }
@@ -35,7 +37,8 @@ export default async function manageDuplicates(lokalise: LokaliseApi, project_id
   let page = await lokalise.keys().list({
     project_id,
     limit: 5000,
-    page: 1
+    page: 1,
+    include_translations: 1
   });
   keys.push(...page.items);
 

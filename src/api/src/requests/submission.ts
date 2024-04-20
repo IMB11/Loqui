@@ -4,8 +4,8 @@ import { LokaliseApi, QueuedProcess } from "@lokalise/node-api";
 import { addHash, Hash } from "../data/persistence.js";
 import manageDuplicates from "../processes/duplicates.js";
 import logger from "../logger.js";
-import { reversedMappings } from "../lang_map.js";
 import _ from "lodash";
+import { transformLocaleArray } from "../lang_map.js";
 
 function delay(milliseconds) {
   return new Promise(resolve => {
@@ -15,24 +15,25 @@ function delay(milliseconds) {
 
 // Exclude file languages.
 async function excludeFileLanguages(lokalise: LokaliseApi, project_id: string, table: { [filename: string]: string[] }, modrinthTable: { [filename: string]: string | undefined}) {
+  const language_isos: string[] = (await lokalise.languages().list({ project_id, limit: 500 })).items.map(lang => lang.lang_iso);
+  
   for (const filename of Object.keys(table)) {
     let languages = table[filename];
 
-    languages = _.filter(languages, lang => {
-      return lang !== "en_us"
-    })
+    languages = transformLocaleArray(languages, language_isos, project_id);
+    _.remove(languages, lang => lang === "en_us");
 
-    const keys = await lokalise.keys().list({ limit: 5000, project_id, filter_filenames: filename });
+    const keys = await lokalise.keys().list({ limit: 5000, project_id, filter_filenames: filename, include_translations: 1 });
 
     let keyData = [];
     for (const key of keys.items) {
       const data = {
         key_id: key.key_id,
         translations: languages.map(lang => ({
-          language_iso: `${reversedMappings[lang]}`,
+          language_iso: lang,
           translation: "[VOID]",
           is_reviewed: true,
-          is_unverified: false,
+          is_unverified: false
         }))
       }
 
@@ -114,7 +115,7 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
       });
     }
 
-    const hashSubmission: Hash = addHash(submission.namespace, localeFileHash, submission.jarVersion);
+    const hashSubmission: Hash = addHash(submission.namespace, localeFileHash, submission.providedLocales, submission.jarVersion);
 
     if (!hashSubmission) {
       continue;
@@ -127,7 +128,7 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
     processed.push({
       data: Buffer.from(stringData).toString("base64"),
       filename: filename,
-      lang_iso: "en",
+      lang_iso: "en_us",
       apply_tm: true,
       format: "json",
       skip_detect_lang_iso: true,
@@ -153,11 +154,10 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
   Promise.all(promises).then(async () => {
     await delay(5000); // Wait for Lokalise to process the files.
-    logger.debug("All files uploaded. Managing duplicates...");
-    await manageDuplicates(lokalise, project_id);
-    logger.debug("Duplicates managed. Excluding file languages...");
+    logger.debug("Excluding file languages...");
     await excludeFileLanguages(lokalise, project_id, fileProcessed, modrinthTable);
-    logger.debug("File languages excluded.");
+    logger.debug("Managing duplicates...");
+    await manageDuplicates(lokalise, project_id);
   })
 
   res.send("ok");
