@@ -12,19 +12,14 @@
     "icon": "assets/loqui/icon.png",
     "environment": "client",
     "entrypoints": {
-        "client": [
-            "dev.imb11.loqui.client.Loqui",
-            "dev.imb11.loqui.client.cache.CacheManager"
-        ],
         "preLaunch": [
-            "dev.imb11.loqui.client.cache.NamespaceHelper"
+            "dev.imb11.loqui.client.Loqui"
         ]
     },
     "mixins": [
         "loqui.mixins.json"
     ],
     "depends": {
-        "minecraft": ">=1.19.4 <1.20.5",
-        "fabric": "*"
+        "minecraft": ">=1.19.4 <1.20.4"
     }
 }

@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import logger from "../logger.js";
 import { delay } from "lodash";
 import { globSync } from "glob";
+import _ from "lodash";
 
 let downloadLock = false;
 
@@ -24,12 +25,10 @@ export async function download(language_isos: string[], project_id: string, loka
 
     logger.debug(`Checking for ${filename}...`);
 
-    if(globSync(`./repo/**/${filename}`).length > 0) {
-      continue;
-    }
-
     const excludedLangs = hashObj.ignoredLocales;
     const languages = language_isos.filter(lang => !excludedLangs.includes(lang));
+
+    _.remove(languages, lang => lang === "en_us");
 
     try {
       downloadPromises.push({
@@ -45,8 +44,8 @@ export async function download(language_isos: string[], project_id: string, loka
         })
       });
     } catch (e) {
-      logger.error(`Error downloading ${filename}: ${e.message}`);
-      throw e;
+      logger.error(`${filename}: ${e.message}`);
+      continue;
     }
   }
 

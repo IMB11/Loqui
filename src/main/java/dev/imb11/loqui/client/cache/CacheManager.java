@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +17,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-public class CacheManager implements ClientModInitializer {
+public class CacheManager {
     public static final Path CACHE_DIR;
     private static final Logger LOGGER = LoggerFactory.getLogger("Loqui/CacheManager");
     private static final Gson gson = new Gson();
@@ -26,12 +27,21 @@ public class CacheManager implements ClientModInitializer {
     }
 
     public static void validateCache() throws IOException {
-        if (!CACHE_DIR.toFile().exists()) {
-            CACHE_DIR.resolve("assets/").toFile().mkdirs();
+        // Check if CACHE_DIR/declaration.v2 exists
+        Path declarationPath = CACHE_DIR.resolve("declaration.v2");
+        File assetsDir = CACHE_DIR.resolve("assets/").toFile();
+        if (!declarationPath.toFile().exists()) {
+            // If it doesn't exist, delete the assets folder and create a new declaration file.
+            FileUtils.deleteDirectory(assetsDir);
+            Files.writeString(declarationPath, "This is a declaration file for Loqui's cache. Do not delete this file.");
+            assetsDir.mkdirs();
+        }
+
+        if(!assetsDir.exists()) {
+            assetsDir.mkdirs();
         }
 
         ArrayList<String> namespaces = new ArrayList<>();
-        File assetsDir = CACHE_DIR.resolve("assets/").toFile();
         String[] directories = assetsDir.list((current, name) -> new File(current, name).isDirectory());
         if (directories != null) {
             namespaces.addAll(Arrays.asList(directories));
@@ -40,29 +50,30 @@ public class CacheManager implements ClientModInitializer {
         for (String namespace : namespaces) {
             Path namespaceData = CACHE_DIR.resolve("assets/" + namespace + "/namespace_data_loqui.json");
             if (!Files.exists(namespaceData)) {
+                // Delete an invalid cache entry.
                 Files.delete(CACHE_DIR.resolve("assets/" + namespace));
             } else {
                 JsonObject object = gson.fromJson(Files.readString(namespaceData), JsonObject.class);
-                String versionString = object.get("version").getAsString();
-                String actualVersion = NamespaceHelper.getVersionFromNamespace(namespace);
+                String namespaceHash = object.get("hash").getAsString();
+                String actualHash = HashManager.getHash(namespace);
 
                 // May be disabled, or they may reinstall it later.
-                if (actualVersion == null) continue;
+                if (actualHash == null) continue;
 
-                // If the versions do not match, delete the namespace cache - aggressive cache invalidation.
-                if (!versionString.equals(actualVersion)) {
+                // If the hashes do not match, delete the cache entry.
+                if (!namespaceHash.equals(actualHash)) {
                     Files.delete(CACHE_DIR.resolve("assets/" + namespace));
                 }
             }
         }
     }
 
-    public static boolean contentExists(String namespace, String version, String language) {
+    public static boolean contentExists(String namespace, String language) {
         Path cachePath = CACHE_DIR.resolve("assets/" + namespace + "/lang/" + language + ".json");
         return cachePath.toFile().exists();
     }
 
-    public static void submitContent(String namespace, String version, String language, String content) throws IOException {
+    public static void submitContent(String namespace, String localeHash, String language, String content) throws IOException {
         Path cachePath = CACHE_DIR.resolve("assets/" + namespace + "/lang/");
         if (!cachePath.toFile().exists()) {
             cachePath.toFile().mkdirs();
@@ -70,9 +81,8 @@ public class CacheManager implements ClientModInitializer {
 
         Files.writeString(Path.of(cachePath.toString(), language + ".json"), content);
 
-        // Write version JSON to namespace_data_loqui.json
         JsonObject object = new JsonObject();
-        object.addProperty("version", version);
+        object.addProperty("hash", localeHash);
         Files.writeString(CACHE_DIR.resolve("assets/" + namespace + "/namespace_data_loqui.json"), gson.toJson(object));
     }
 
@@ -88,13 +98,5 @@ public class CacheManager implements ClientModInitializer {
             LOGGER.error("Failed to get cached namespaces", e);
         }
         return namespaces;
-    }
-
-    @Override
-    public void onInitializeClient() {
-        try {
-            CacheManager.validateCache();
-        } catch (IOException ignored) {
-        }
     }
 }

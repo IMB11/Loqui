@@ -9,6 +9,7 @@ import logger from "./logger.js";
 import { db } from "./data/persistence.js";
 import { config } from "./config.js";
 import { download } from "./data/download.js";
+import { retrieveTranslations } from "./requests/retrieval.js";
 
 const project_id = config.lokalise_project_id;
 const lokalise = new LokaliseApi({
@@ -23,6 +24,7 @@ logger.info("Starting server...");
 (async () => {
   const app = express.default();
 
+  app.use(express.static("public"));
   app.use(json({ limit: '5mb' }));
 
   //#region Deprecated Functions
@@ -46,11 +48,6 @@ logger.info("Starting server...");
     });
   });
 
-  app.get("/", (req, res) => {
-    // Redirect to loqui.imb11.dev
-    res.redirect("https://loqui.imb11.dev");
-  });
-
   app.get("/health", rateLimit({
     windowMs: 1 * 60 * 1000, // 1 mins per window.
     max: 3, // max 3 requests per window.
@@ -64,9 +61,25 @@ logger.info("Starting server...");
   });
   //#endregion
 
-  app.post("/v2/submit", (req, res) => {
+  app.post("/api/v2/submit", rateLimit({
+    windowMs: 30 * 60 * 1000,
+    max: 15,
+    standardHeaders: true,
+  }), (req, res) => {
     submitTranslationRequest(lokalise, project_id, req, res);
   });
+
+  app.post("/api/v2/retrieve", rateLimit({
+    windowMs: 30 * 60 * 1000,
+    max: 15,
+    standardHeaders: true,
+  }), (req, res) => {
+    retrieveTranslations(lokalise, project_id, req, res);
+  })
+
+  app.get("/", (req, res) => {
+    res.sendFile("index.html", { root: "./public" })
+  })
 
   app.set('trust proxy', 1)
 

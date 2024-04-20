@@ -96,6 +96,8 @@ dist
 .data/**
 /temp/**
 
+public/**
+
 # Loqui Cache Repo
 /repo/**
 ./repo_readonly/**

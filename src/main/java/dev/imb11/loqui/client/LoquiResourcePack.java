@@ -100,17 +100,18 @@ public class LoquiResourcePack implements PackResources {
         }
     }
 
+    // 1.20.5: This will be required.
+//    @Override
+//    public @NotNull PackLocationInfo location() {
+//        return new PackLocationInfo("loqui", Component.literal("Loqui Translations"), PackSource.DEFAULT, Optional.empty());
+//    }
+
     @Override
-    public String packId() {
+    public @NotNull String packId() {
         return "loqui";
     }
 
     @Override
     public void close() {
-    }
-
-    @Override
-    public boolean isBuiltin() {
-        return false;
     }
 }

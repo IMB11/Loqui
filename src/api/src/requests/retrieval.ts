@@ -1,9 +1,11 @@
 import { LokaliseApi } from "@lokalise/node-api";
 import { Request, Response } from "express";
 import { getHashObject, Hash } from "../data/persistence.js";
-import { safeParseLocale, transformLocaleArray } from "../lang_map.js";
+import { reverseFallbacks, safeParseLocale, transformLocaleArray } from "../lang_map.js";
 import { existsSync, readFileSync } from "fs";
-import _ from "lodash";
+import _, { reverse } from "lodash";
+import logger from "../logger.js";
+import { globSync } from "glob";
 
 type RetrievalRequest = string[];
 
@@ -28,40 +30,62 @@ export async function retrieveTranslations(lokalise: LokaliseApi, project_id: st
 
   const language_isos: string[] = (await lokalise.languages().list({ project_id, limit: 500 })).items.map(lang => lang.lang_iso);
 
-  const files: { filePath: string, hashObj: Hash }[] = [];
+  const files: { filePath: string[], hashObj: Hash }[] = [];
+
+  logger.info(`Retrieving translations for ${data.length} mods.`);
+
   // Retrieve translations.
   for (const localeHash of data) {
     const hashObj = getHashObject(localeHash);
-    const filename = `${hashObj.namespace}/${hashObj.jarVersion}.json`;
 
-    const ignoredLanguages = transformLocaleArray(hashObj.ignoredLocales, language_isos, project_id);
-
-    // Invert to get the languages to retrieve.
-    const languages = language_isos.filter(lang => !ignoredLanguages.includes(lang));
-
-    for (const lang of languages) {
-      files.push({
-        filePath: `./repo/${filename}/${lang}.json`,
-        hashObj
-      });
+    if(!hashObj) {
+      logger.warn(`Hash object not found for ${localeHash}.`);
+      continue;
     }
+    
+    logger.info(`Retrieving translations for ${hashObj.namespace}-${hashObj.jarVersion}.json`)
+
+    const globResult = globSync(`./repo/**/${hashObj.namespace}/${hashObj.jarVersion}.json`);
+
+    if(globResult.length === 0) {
+      logger.error(`No file found for ${hashObj.namespace}-${hashObj.jarVersion}.json`);
+      continue;
+    }
+
+    files.push({
+      filePath: globResult,
+      hashObj
+    });
   }
 
   const translationFiles = await Promise.all(files.map(async file => {
-    const path = file.filePath;
-    if(existsSync(file.filePath)) {
-      return {
-        file,
-        data: JSON.parse(readFileSync(file.filePath, "utf-8"))
-      };
-    }
-    return {
+    const paths = file.filePath;
+    const result: { hashObj: Hash, localeSet: { [locale: string]: string } } = {
       hashObj: file.hashObj,
-      data: undefined
+      localeSet: {},
     };
+
+    for (const path of paths) {
+      if(existsSync(path)) {
+        const data = JSON.parse(readFileSync(path, "utf-8"));
+
+        const locale = path.split("/")[1]  // Get locale from path. (repo/<locale>/namespace/version.json) -> <locale>
+        result.localeSet[locale] = data;
+
+        // Also provide dialects.
+        const dialects: string[] = reverseFallbacks[locale];
+        if(dialects) {
+          for(const dialect of dialects) {
+            result.localeSet[dialect] = data;
+          }
+        }
+      }
+    }
+
+    return result;
   }));
 
-  _.remove(translationFiles, file => file.data === undefined);
+  _.remove(translationFiles, file => Object.keys(file.localeSet).length === 0);
 
   res.send(translationFiles);
 }

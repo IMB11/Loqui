@@ -31,6 +31,18 @@ export const fallbackMap = {
   "es_ve": "es_es"
 }
 
+const reverseFallbacks: { [baseLocale: string]: string[] } = {};
+
+_.forEach(fallbackMap, (value, key) => {
+  if (!reverseFallbacks[value]) {
+    reverseFallbacks[value] = [];
+  }
+
+  reverseFallbacks[value].push(key);
+});
+
+export {reverseFallbacks};
+
 export function transformLocaleArray(locales: string[], supportedLanguages: string[], project_id: string): string[] {
   const filteredLanguages = new Set(_.filter(locales, locale => supportedLanguages.includes(safeParseLocale(locale))))
 
