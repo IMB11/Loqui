@@ -47,6 +47,20 @@ export async function retrieveTranslations(lokalise: LokaliseApi, project_id: st
 
     const globResult = globSync(`./repo/**/${hashObj.namespace}/${hashObj.jarVersion}.json`);
 
+    // For each globResult, check if the translation file has the same number of keys as the root ./repo/en_us/<namespace>/<version>.json file.
+    // If not, remove the file from the list.
+    const baseData = JSON.parse(readFileSync(`./repo/en_us/${hashObj.namespace}/${hashObj.jarVersion}.json`, "utf-8"));
+    let filesToRemove = [];
+    for(const path of globResult) {
+      const data = JSON.parse(readFileSync(path, "utf-8"));
+      if(Object.keys(data).length !== Object.keys(baseData).length) {
+        logger.warn(`File ${path} has a different number of keys than the base translation file. Ignoring.`);
+        filesToRemove.push(path);
+      }
+    }
+
+    _.remove(globResult, path => filesToRemove.includes(path));
+
     if(globResult.length === 0) {
       logger.error(`No file found for ${hashObj.namespace}-${hashObj.jarVersion}.json`);
       continue;

@@ -6,12 +6,15 @@ import dev.imb11.loqui.client.i18n.LoquiDownloader;
 import dev.imb11.loqui.client.i18n.LoquiUploader;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Stream;
 
 public class Loqui implements PreLaunchEntrypoint {
     public static boolean HAS_REPORTED = false;
@@ -22,9 +25,9 @@ public class Loqui implements PreLaunchEntrypoint {
 
     @Override
     public void onPreLaunch() {
-        if(FabricLoader.getInstance().isDevelopmentEnvironment()) {
-            API_ROOT = "http://localhost:9182";
-        }
+//        if(FabricLoader.getInstance().isDevelopmentEnvironment()) {
+//            API_ROOT = "http://localhost:9182";
+//        }
 
         try {
             CacheManager.validateCache();
@@ -35,9 +38,16 @@ public class Loqui implements PreLaunchEntrypoint {
         LanguageIndexer indexer = new LanguageIndexer(FabricLoader.getInstance().getGameDir().resolve("mods/"));
         var entries = indexer.index();
 
-        String[] hashes = entries.stream().map(LanguageIndexer.IndexEntry::jarHash).toArray(String[]::new);
-        LoquiDownloader.download(hashes);
+        String[] hashes = entries.stream().map(entry -> {
+            ArrayList<String> namespaceHashes = new ArrayList<>();
+            for (LanguageIndexer.NamespaceTranslationEntry namespaceTranslationEntry : entry.translationEntry()) {
+                String content = namespaceTranslationEntry.englishLocaleContent;
+                namespaceHashes.add(DigestUtils.sha512Hex(content));
+            }
+            return namespaceHashes.toArray(String[]::new);
+        }).flatMap(Stream::of).toArray(String[]::new);
 
+        LoquiDownloader.download(hashes);
         LoquiUploader.upload(entries);
     }
 }

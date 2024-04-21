@@ -28,8 +28,6 @@ export async function download(language_isos: string[], project_id: string, loka
     const excludedLangs = hashObj.ignoredLocales;
     const languages = language_isos.filter(lang => !excludedLangs.includes(lang));
 
-    _.remove(languages, lang => lang === "en_us");
-
     try {
       downloadPromises.push({
         namespace: hashObj.namespace,
