@@ -10,6 +10,7 @@ import { db } from "./data/persistence.js";
 import { config } from "./config.js";
 import { download } from "./data/download.js";
 import { retrieveTranslations } from "./requests/retrieval.js";
+import { copyFileSync, readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
 
 const project_id = config.lokalise_project_id;
 const lokalise = new LokaliseApi({
@@ -24,6 +25,9 @@ logger.info("Starting server...");
 try {
   (async () => {
     const app = express.default();
+
+    const language_isos = (await lokalise.languages().list({ project_id, limit: 500 })).items.map(lang => lang.lang_iso);
+    download(language_isos, project_id, lokalise);
   
     // const keys = await lokalise.keys().list({ project_id, limit: 5000 });
     // await lokalise.keys().bulk_delete(keys.items.map(key => key.key_id), { project_id })
@@ -90,15 +94,27 @@ try {
     app.listen(config.port_number, () => {
       logger.info("Server is running on port " + config.port_number);
     });
-  
-    const language_isos = (await lokalise.languages().list({ project_id, limit: 500 })).items.map(lang => lang.lang_iso);
-  
-    download(language_isos, project_id, lokalise);
     
     // Every hour.
     setInterval(() => {
       download(language_isos, project_id, lokalise);
     }, 1000 * 60 * 60)
+
+    // Backup .data/db.sqlite every 4 hours.
+    setInterval(() => {
+      copyFileSync("./data/db.sqlite", `./data/backups/db-${Date.now()}.sqlite`);
+
+      // Delete any backups older than 4 days.
+      const now = Date.now();
+      const weekAgo = now - (1000 * 60 * 60 * 24 * 4);
+      const files = readdirSync("./data/backups");
+      for (const file of files) {
+        const stats = statSync(`./data/backups/${file}`);
+        if (stats.mtimeMs < weekAgo) {
+          rmSync(`./data/backups/${file}`);
+        }
+      }
+    }, 1000 * 60 * 60 * 4)
   })()
 } catch (e) {
   logger.error(e);

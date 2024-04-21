@@ -91,6 +91,9 @@ public class LanguageIndexer {
 
                 indexEntries.add(new IndexEntry(modVersion, sha512, namespaceEntries.values().stream().toList()));
 
+                // Remove any entries that didn't find en_us.json
+                namespaceEntries.entrySet().removeIf(entry -> entry.getValue().englishLocaleContent == null);
+
                 // Output all entries into console for debugging purposes, pretty.
                 namespaceEntries.forEach((namespace, entry) -> {
                     LOGGER.info("Indexed " + namespace + " from " + mod.getName() + " with existing locales of: " + Arrays.toString(entry.providedLocales.toArray()));
