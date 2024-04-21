@@ -36,7 +36,6 @@ export async function retrieveTranslations(req: Request, res: Response) {
     const hashObj = getHashObject(localeHash);
 
     if(!hashObj) {
-      logger.warn(`Hash object not found for ${localeHash}.`);
       continue;
     }
     
@@ -49,12 +48,17 @@ export async function retrieveTranslations(req: Request, res: Response) {
       continue;
     }
 
+    // Remove the base translation file from the list.
+    _.remove(globResult, path => path.includes("en_us"));
+
     // For each globResult, check if the translation file has the same number of keys as the root ./repo/en_us/<namespace>/<version>.json file.
     // If not, remove the file from the list.
-    const baseData = JSON.parse(readFileSync(`./repo/en_us/${hashObj.namespace}/${hashObj.jarVersion}.json`, "utf-8"));
+    const baseContent = readFileSync(`./repo/en_us/${hashObj.namespace}/${hashObj.jarVersion}.json`, "utf-8");
+    const baseData = JSON.parse(baseContent);
     let filesToRemove = [];
     for(const path of globResult) {
-      const data = JSON.parse(readFileSync(path, "utf-8"));
+      const fileContents = readFileSync(path, "utf-8")
+      const data = JSON.parse(fileContents);
       if(Object.keys(data).length !== Object.keys(baseData).length) {
         logger.warn(`File ${path} has a different number of keys than the base translation file. Ignoring.`);
         filesToRemove.push(path);
@@ -62,7 +66,6 @@ export async function retrieveTranslations(req: Request, res: Response) {
     }
 
     _.remove(globResult, path => filesToRemove.includes(path));
-    _.remove(globResult, path => path.includes("en_us"));
 
     if(globResult.length === 0) {
       logger.error(`No file found for ${hashObj.namespace}-${hashObj.jarVersion}.json`);

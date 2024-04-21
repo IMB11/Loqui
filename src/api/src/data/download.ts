@@ -1,9 +1,10 @@
 import { LokaliseApi } from "@lokalise/node-api";
 import { getAllHashes } from "./persistence.js";
-import { createReadStream, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { Extract } from "unzipper";
 import logger from "../logger.js";
 import _ from "lodash";
+import { glob, globSync } from "glob";
 
 let downloadLock = false;
 
@@ -14,16 +15,16 @@ function delay(milliseconds: number) {
 }
 
 export async function download(language_isos: string[], project_id: string, lokalise: LokaliseApi) {
-  if(downloadLock) return;
+  if (downloadLock) return;
   downloadLock = true;
 
-  if(existsSync("./repo")) {
+  if (existsSync("./repo")) {
     logger.info("Cleaning up old translations...");
     rmSync("./repo", { recursive: true });
     logger.info("Old translations cleaned up.");
   }
 
-  if(existsSync("./temp")) {
+  if (existsSync("./temp")) {
     logger.info("Cleaning up old temp files...");
     rmSync("./temp", { recursive: true });
     logger.info("Old temp files cleaned up.");
@@ -44,7 +45,7 @@ export async function download(language_isos: string[], project_id: string, loka
     const languages = language_isos.filter(lang => !excludedLangs.includes(lang));
 
     let tries = 3;
-    while(true) {
+    while (true) {
       try {
         downloadPromises.push({
           namespace: hashObj.namespace,
@@ -61,7 +62,7 @@ export async function download(language_isos: string[], project_id: string, loka
         break;
       } catch (e) {
         tries++;
-        if(tries === 3) {
+        if (tries === 3) {
           logger.error("Failed to download translations. Skipping...");
           break;
         }
@@ -89,8 +90,8 @@ export async function download(language_isos: string[], project_id: string, loka
   mkdirSync("./temp", { recursive: true });
   mkdirSync("./repo", { recursive: true });
 
-  for(const result of results) {
-    if(result.bundle_url) {
+  for (const result of results) {
+    if (result.bundle_url) {
       // Download bundle into temp folder and extract it into `./repo` folder, preserving the directory structure.
       const targetPath = `./temp/${result.namespace}-${result.version}.zip`;
       logger.debug(result.bundle_url);
@@ -99,11 +100,29 @@ export async function download(language_isos: string[], project_id: string, loka
       writeFileSync(targetPath, Buffer.from(data));
 
       // Extract zip into `./repo` folder.
-      const readStream = createReadStream(`./temp/${result.namespace}-${result.version}.zip`).pipe(Extract({ path: `./repo`}));
+      const readStream = createReadStream(`./temp/${result.namespace}-${result.version}.zip`).pipe(Extract({ path: `./repo` }));
     }
   }
 
+  // Validate all JSON files in the `./repo` folder - delete if invalid.
+  const globResult = globSync(`./repo/**/**/*.json`);
+
+  logger.info(`Validating ${globResult.length} JSON files...`)
+
+  globResult.map(value => {
+    const fileContents = readFileSync(value, "utf-8");
+    try {
+      JSON.parse(fileContents);
+    } catch (e) {
+      logger.error(`File ${value} is not valid JSON. Deleting.`);
+      rmSync(value);
+    }
+    return;
+  })
+
   logger.info("Translations downloaded.");
+
+
 
   downloadLock = false;
 }
