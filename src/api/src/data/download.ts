@@ -14,6 +14,18 @@ export async function download(language_isos: string[], project_id: string, loka
   if(downloadLock) return;
   downloadLock = true;
 
+  if(existsSync("./repo")) {
+    logger.info("Cleaning up old translations...");
+    rmSync("./repo", { recursive: true });
+    logger.info("Old translations cleaned up.");
+  }
+
+  if(existsSync("./temp")) {
+    logger.info("Cleaning up old temp files...");
+    rmSync("./temp", { recursive: true });
+    logger.info("Old temp files cleaned up.");
+  }
+
   logger.info("Downloading translations...");
   const hashObjs = getAllHashes();
 

@@ -47,6 +47,7 @@ public class LoquiDownloader {
                         String localeContent = localeSet.get(localeCode).toString();
                         LOGGER.info("Saving locale file for " + namespace + " with locale code " + localeCode);
                         LOGGER.info(localeContent);
+                        CacheManager.submitContent(namespace, localeHash, localeCode, localeContent);
                     }
                 }
 
