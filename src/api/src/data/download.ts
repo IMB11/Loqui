@@ -110,7 +110,7 @@ export async function download(language_isos: string[], project_id: string, loka
   logger.info(`Validating ${globResult.length} JSON files...`)
 
   globResult.map(value => {
-    const fileContents = readFileSync(value, "utf-16");
+    const fileContents = readFileSync(value, "utf-8");
     try {
       JSON.parse(fileContents);
     } catch (e) {

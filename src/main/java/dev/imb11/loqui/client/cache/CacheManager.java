@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -79,7 +80,7 @@ public class CacheManager {
             cachePath.toFile().mkdirs();
         }
 
-        Files.writeString(Path.of(cachePath.toString(), language + ".json"), content);
+        Files.writeString(Path.of(cachePath.toString(), language + ".json"), content, StandardCharsets.UTF_8);
 
         JsonObject object = new JsonObject();
         object.addProperty("hash", localeHash);

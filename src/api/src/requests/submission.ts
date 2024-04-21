@@ -192,9 +192,10 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
       logger.debug("Excluding file languages...");
       await excludeFileLanguages(lokalise, project_id, fileProcessed, modrinthTable);
+
       logger.debug("Managing duplicates...");
       await manageDuplicates(lokalise, project_id);
-      logger.debug("Done managing duplicates.");
+      logger.debug("Submission complete.")
     } catch (e) {
       logger.error(`Error managing:`);
       logger.error(e);

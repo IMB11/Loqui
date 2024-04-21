@@ -11,6 +11,7 @@ import { config } from "./config.js";
 import { download } from "./data/download.js";
 import { retrieveTranslations } from "./requests/retrieval.js";
 import { copyFileSync, readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
+import manageDuplicates from "./processes/duplicates.js";
 
 const project_id = config.lokalise_project_id;
 const lokalise = new LokaliseApi({
@@ -69,21 +70,21 @@ try {
     });
     //#endregion
   
-    app.post("/api/v2/submit", rateLimit({
-      windowMs: 30 * 60 * 1000,
-      max: 15,
-      standardHeaders: true,
-    }), (req, res) => {
-      submitTranslationRequest(lokalise, project_id, req, res);
-    });
+    // app.post("/api/v2/submit", rateLimit({
+    //   windowMs: 30 * 60 * 1000,
+    //   max: 15,
+    //   standardHeaders: true,
+    // }), (req, res) => {
+    //   submitTranslationRequest(lokalise, project_id, req, res);
+    // });
   
-    app.post("/api/v2/retrieve", rateLimit({
-      windowMs: 30 * 60 * 1000,
-      max: 15,
-      standardHeaders: true,
-    }), (req, res) => {
-      retrieveTranslations(req, res);
-    })
+    // app.post("/api/v2/retrieve", rateLimit({
+    //   windowMs: 30 * 60 * 1000,
+    //   max: 15,
+    //   standardHeaders: true,
+    // }), (req, res) => {
+    //   retrieveTranslations(req, res);
+    // })
   
     app.get("/", (req, res) => {
       res.sendFile("index.html", { root: "./public" })

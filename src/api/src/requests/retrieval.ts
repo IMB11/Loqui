@@ -53,11 +53,11 @@ export async function retrieveTranslations(req: Request, res: Response) {
 
     // For each globResult, check if the translation file has the same number of keys as the root ./repo/en_us/<namespace>/<version>.json file.
     // If not, remove the file from the list.
-    const baseContent = readFileSync(`./repo/en_us/${hashObj.namespace}/${hashObj.jarVersion}.json`, "utf-16");
+    const baseContent = readFileSync(`./repo/en_us/${hashObj.namespace}/${hashObj.jarVersion}.json`, "utf-8");
     const baseData = JSON.parse(baseContent);
     let filesToRemove = [];
     for(const path of globResult) {
-      const fileContents = readFileSync(path, "utf-16")
+      const fileContents = readFileSync(path, "utf-8")
       const data = JSON.parse(fileContents);
       if(Object.keys(data).length !== Object.keys(baseData).length) {
         logger.warn(`File ${path} has a different number of keys than the base translation file. Ignoring.`);
@@ -87,7 +87,7 @@ export async function retrieveTranslations(req: Request, res: Response) {
 
     for (const path of paths) {
       if(existsSync(path)) {
-        const data = JSON.parse(readFileSync(path, "utf-16"));
+        const data = JSON.parse(readFileSync(path, "utf-8"));
 
         const locale = path.split("/")[1]  // Get locale from path. (repo/<locale>/namespace/version.json) -> <locale>
         result.localeSet[locale] = data;
