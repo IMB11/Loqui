@@ -12,14 +12,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static dev.imb11.loqui.client.Loqui.LOQUI_IO_POOL;
 
 public class LoquiDownloader {
-    private static Logger LOGGER = LoggerFactory.getLogger("Loqui/Downloader");
+    private static final Logger LOGGER = LoggerFactory.getLogger("Loqui/Downloader");
     public static void download(String[] hashes) {
         Gson gson = new Gson();
         String jsonData = gson.toJson(hashes);
@@ -29,14 +27,12 @@ public class LoquiDownloader {
             try {
                 String jsonResult = HttpUtil.postAPI("/api/v2/retrieve", jsonData);
                 LOGGER.info("Received language files from server.");
-                LOGGER.info(jsonResult);
                 JsonArray results = gson.fromJson(jsonResult, JsonArray.class);
 
                 ArrayList<DownloadResult> downloadResults = getDownloadResults(results);
 
                 for (DownloadResult result : downloadResults) {
                     LOGGER.info("Downloaded language file for " + result.hashObj().namespace());
-                    LOGGER.info(result.toString());
 
                     JsonObject localeSet = result.localeSet();
                     String namespace = result.hashObj().namespace();
@@ -46,7 +42,6 @@ public class LoquiDownloader {
                     for (String localeCode : localeSet.keySet()) {
                         String localeContent = localeSet.get(localeCode).toString();
                         LOGGER.info("Saving locale file for " + namespace + " with locale code " + localeCode);
-                        LOGGER.info(localeContent);
                         CacheManager.submitContent(namespace, localeHash, localeCode, localeContent);
                     }
                 }

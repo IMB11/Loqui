@@ -10,6 +10,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Stream;
@@ -92,10 +93,8 @@ public class LanguageIndexer {
 
                 // Output all entries into console for debugging purposes, pretty.
                 namespaceEntries.forEach((namespace, entry) -> {
-                    LOGGER.info("=====================================");
-                    LOGGER.info("Namespace: " + namespace);
-                    LOGGER.info("Provided locales: " + entry.providedLocales);
-                    LOGGER.info("English locale content: " + entry.englishLocaleContent.getBytes().length + " bytes");
+                    LOGGER.info("Indexed " + namespace + " from " + mod.getName() + " with existing locales of: " + Arrays.toString(entry.providedLocales.toArray()));
+                    LOGGER.info("en_us.json size: " + entry.englishLocaleContent.getBytes().length + " bytes.");
                 });
             } catch (IOException e) {
                 LOGGER.error("Failed to index file: " + mod.getName(), e);
