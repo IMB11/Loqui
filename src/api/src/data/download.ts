@@ -7,6 +7,12 @@ import _ from "lodash";
 
 let downloadLock = false;
 
+function delay(milliseconds: number) {
+  return new Promise(resolve => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
 export async function download(language_isos: string[], project_id: string, lokalise: LokaliseApi) {
   if(downloadLock) return;
   downloadLock = true;
@@ -37,22 +43,32 @@ export async function download(language_isos: string[], project_id: string, loka
     const excludedLangs = hashObj.ignoredLocales;
     const languages = language_isos.filter(lang => !excludedLangs.includes(lang));
 
-    try {
-      downloadPromises.push({
-        namespace: hashObj.namespace,
-        version: hashObj.jarVersion,
-        filePath: `./repo/${filename}`,
-        downloadPromise: await lokalise.files().download(project_id, {
-          format: "json",
-          filter_langs: languages,
-          filter_filenames: [filename],
-          export_empty_as: "skip",
-          placeholder_format: "printf"
-        })
-      });
-    } catch (e) {
-      logger.error(`${filename}: ${e.message}`);
-      continue;
+    let tries = 3;
+    while(true) {
+      try {
+        downloadPromises.push({
+          namespace: hashObj.namespace,
+          version: hashObj.jarVersion,
+          filePath: `./repo/${filename}`,
+          downloadPromise: await lokalise.files().download(project_id, {
+            format: "json",
+            filter_langs: languages,
+            filter_filenames: [filename],
+            export_empty_as: "skip",
+            placeholder_format: "printf"
+          })
+        });
+      } catch (e) {
+        tries++;
+        if(tries === 3) {
+          logger.error("Failed to download translations. Skipping...");
+          break;
+        }
+
+        logger.error("Failed to download translations. Retrying in 0.5 seconds... " + tries + "/3");
+        await delay(0.5);
+        continue;
+      }
     }
   }
 
