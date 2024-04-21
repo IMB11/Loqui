@@ -73,110 +73,107 @@ async function excludeFileLanguages(lokalise: LokaliseApi, project_id: string, t
 export async function submitTranslationRequest(lokalise: LokaliseApi, project_id: string, req: Request, res: Response) {
   const body: Submission[] = req.body;
 
-  // Validate body.
-  if (!Array.isArray(body)) {
-    return res.status(400).send({
-      message: "Body must be an array of Submission objects.",
-      error: "invalid_body"
-    });
-  }
-
-  // Validate each submission.
-  for (const submission of body) {
-    if (!submission.namespace || !submission.jarHash || !submission.providedLocales || !submission.baseLocaleData || !submission.jarVersion) {
+    // Validate body.
+    if (!Array.isArray(body)) {
       return res.status(400).send({
-        message: "Each submission must have a modname, modid, jarHash, providedLocales, and baseLocaleData.",
-        error: "invalid_submission"
+        message: "Body must be an array of Submission objects.",
+        error: "invalid_body"
       });
     }
-  }
 
-  const processed: any[] = [];
-  const fileProcessed: { [filename: string]: string[] } = {};
-  const modrinthTable: { [filename: string]: string | undefined } = {};
-
-  // Process each submission.
-  let processes = [];
-  for (const submission of body) {
-    let namespace = submission.namespace;
-
-    if (blacklist.includes(namespace)) {
-      logger.info(`Skipping submission for ${namespace} due to blacklist.`);
-      continue;
-    }
-
-    // Process submission.
-    let translationData: Record<string, string>;
-    try {
-      translationData = JSON.parse(submission.baseLocaleData);
-    } catch {
-      continue;
-    }
-
-    // Verify that it's in [key: string]: string format.
-    if (Object.keys(translationData).some(key => typeof translationData[key] !== "string")) {
-      continue;
-    }
-
-    const stringData = submission.baseLocaleData;
-
-    // Verify that a file doesn't already exist with the same hash.
-    const localeFileHash = getBaseLocaleHash(submission);
-
-    const existingFile = await lokalise.files().list({
-      project_id,
-      filter_filename: localeFileHash
-    });
-
-    if (existingFile.items.length > 0) {
-      continue;
-    }
-
-    const hashSubmission: Hash = addHash(submission.namespace, localeFileHash, submission.providedLocales, submission.jarVersion);
-
-    if (!hashSubmission) {
-      continue;
-    }
-
-    logger.debug(`Processing submission for ${submission.namespace} - ${submission.jarVersion}`);
-
-    const filename = `${submission.namespace}/${hashSubmission.jarVersion}.json`;
-
-    while (true) {
-      try {
-        logger.debug(`Uploading file ${filename}`);
-        const processResult = await lokalise.files().upload(project_id, {
-          data: Buffer.from(stringData).toString("base64"),
-          filename: filename,
-          lang_iso: "en_us",
-          apply_tm: true,
-          format: "json",
-          skip_detect_lang_iso: true,
-          distinguish_by_file: true,
-          convert_placeholders: false,
-          slashn_to_linebreak: true,
+    // Validate each submission.
+    for (const submission of body) {
+      if (!submission.namespace || !submission.jarHash || !submission.providedLocales || !submission.baseLocaleData || !submission.jarVersion) {
+        return res.status(400).send({
+          message: "Each submission must have a modname, modid, jarHash, providedLocales, and baseLocaleData.",
+          error: "invalid_submission"
         });
-        processes.push(processResult.process_id);
-        break;
-      } catch (e) {
-        logger.error(`Error uploading ${filename}: Probably rate-limited. Retrying in 0.5 seconds.`);
-        await delay(500);
-        continue;
       }
     }
 
-    fileProcessed[filename] = submission.providedLocales;
-
-    const modrinthData = await getModrinthFile(submission);
-
-    if (modrinthData) {
-      modrinthTable[filename] = `${modrinthData.name} - https://modrinth.com/mod/${modrinthData.project_id}`;
-    }
-  }
-
-  res.send("ok");
-
   finalizationTasks.push(async () => {
+    const fileProcessed: { [filename: string]: string[] } = {};
+    const modrinthTable: { [filename: string]: string | undefined } = {};
+
+    // Process each submission.
+    let processes = [];
+    for (const submission of body) {
+      let namespace = submission.namespace;
+
+      if (blacklist.includes(namespace)) {
+        logger.info(`Skipping submission for ${namespace} due to blacklist.`);
+        continue;
+      }
+
+      // Process submission.
+      let translationData: Record<string, string>;
+      try {
+        translationData = JSON.parse(submission.baseLocaleData);
+      } catch {
+        continue;
+      }
+
+      // Verify that it's in [key: string]: string format.
+      if (Object.keys(translationData).some(key => typeof translationData[key] !== "string")) {
+        continue;
+      }
+
+      const stringData = submission.baseLocaleData;
+
+      // Verify that a file doesn't already exist with the same hash.
+      const localeFileHash = getBaseLocaleHash(submission);
+
+      const existingFile = await lokalise.files().list({
+        project_id,
+        filter_filename: localeFileHash
+      });
+
+      if (existingFile.items.length > 0) {
+        continue;
+      }
+
+      const hashSubmission: Hash = addHash(submission.namespace, localeFileHash, submission.providedLocales, submission.jarVersion);
+
+      if (!hashSubmission) {
+        continue;
+      }
+
+      logger.debug(`Processing submission for ${submission.namespace} - ${submission.jarVersion}`);
+
+      const filename = `${submission.namespace}/${hashSubmission.jarVersion}.json`;
+
+      while (true) {
+        try {
+          logger.debug(`Uploading file ${filename}`);
+          const processResult = await lokalise.files().upload(project_id, {
+            data: Buffer.from(stringData).toString("base64"),
+            filename: filename,
+            lang_iso: "en_us",
+            apply_tm: true,
+            format: "json",
+            skip_detect_lang_iso: true,
+            distinguish_by_file: true,
+            convert_placeholders: false,
+            slashn_to_linebreak: true,
+          });
+          processes.push(processResult.process_id);
+          break;
+        } catch (e) {
+          logger.error(`Error uploading ${filename}: Probably rate-limited. Retrying in 0.5 seconds.`);
+          await delay(500);
+          continue;
+        }
+      }
+
+      fileProcessed[filename] = submission.providedLocales;
+
+      const modrinthData = await getModrinthFile(submission);
+
+      if (modrinthData) {
+        modrinthTable[filename] = `${modrinthData.name} - https://modrinth.com/mod/${modrinthData.project_id}`;
+      }
+    }
+
     try {
       // Wait until all relevant processes are done.
       while (true) {
@@ -202,5 +199,7 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
       logger.error(`Error managing:`);
       logger.error(e);
     }
-  })
+  });
+
+  res.status(200).send({ status: "Your submission is being processed."})
 }
