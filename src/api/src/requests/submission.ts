@@ -176,8 +176,8 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
     try {
       // Wait until all relevant processes are done.
+      console.log("Waiting for processes to finish... (This may take a while...)")
       while (true) {
-        logger.debug("Checking processes...");
         const processesActive = await lokalise.queuedProcesses().list({ project_id, limit: 500 });
         const incomplete = _.filter(processesActive.items, (process: QueuedProcess) => {
           return processes.includes(process.process_id) && !["finished", "failed", "cancelled"].includes(process.status);
