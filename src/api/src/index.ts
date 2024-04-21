@@ -78,7 +78,7 @@ try {
       max: 15,
       standardHeaders: true,
     }), (req, res) => {
-      retrieveTranslations(lokalise, project_id, req, res);
+      retrieveTranslations(req, res);
     })
   
     app.get("/", (req, res) => {

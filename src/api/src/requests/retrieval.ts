@@ -1,15 +1,14 @@
-import { LokaliseApi } from "@lokalise/node-api";
 import { Request, Response } from "express";
 import { getHashObject, Hash } from "../data/persistence.js";
-import { reverseFallbacks, safeParseLocale, transformLocaleArray } from "../lang_map.js";
+import { reverseFallbacks } from "../lang_map.js";
 import { existsSync, readFileSync } from "fs";
-import _, { reverse } from "lodash";
+import _ from "lodash";
 import logger from "../logger.js";
 import { globSync } from "glob";
 
 type RetrievalRequest = string[];
 
-export async function retrieveTranslations(lokalise: LokaliseApi, project_id: string, req: Request, res: Response) {
+export async function retrieveTranslations(req: Request, res: Response) {
   const data: RetrievalRequest = req.body;
 
   // Verify body.
@@ -27,8 +26,6 @@ export async function retrieveTranslations(lokalise: LokaliseApi, project_id: st
       error: "invalid_body"
     });
   }
-
-  const language_isos: string[] = (await lokalise.languages().list({ project_id, limit: 500 })).items.map(lang => lang.lang_iso);
 
   const files: { filePath: string[], hashObj: Hash }[] = [];
 
@@ -60,6 +57,7 @@ export async function retrieveTranslations(lokalise: LokaliseApi, project_id: st
     }
 
     _.remove(globResult, path => filesToRemove.includes(path));
+    _.remove(globResult, path => path.includes("en_us"));
 
     if(globResult.length === 0) {
       logger.error(`No file found for ${hashObj.namespace}-${hashObj.jarVersion}.json`);

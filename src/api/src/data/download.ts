@@ -1,11 +1,8 @@
-import { DownloadBundle, LokaliseApi } from "@lokalise/node-api";
+import { LokaliseApi } from "@lokalise/node-api";
 import { getAllHashes } from "./persistence.js";
-import fs, { existsSync, mkdir, mkdirSync, rmSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { Extract } from "unzipper";
-import { resolve } from "node:path";
 import logger from "../logger.js";
-import { delay } from "lodash";
-import { globSync } from "glob";
 import _ from "lodash";
 
 let downloadLock = false;
@@ -82,10 +79,10 @@ export async function download(language_isos: string[], project_id: string, loka
       logger.debug(result.bundle_url);
       const data = await fetch(result.bundle_url).then(res => res.arrayBuffer());
 
-      fs.writeFileSync(targetPath, Buffer.from(data));
+      writeFileSync(targetPath, Buffer.from(data));
 
       // Extract zip into `./repo` folder.
-      const readStream = fs.createReadStream(`./temp/${result.namespace}-${result.version}.zip`).pipe(Extract({ path: `./repo`}));
+      const readStream = createReadStream(`./temp/${result.namespace}-${result.version}.zip`).pipe(Extract({ path: `./repo`}));
     }
   }
 

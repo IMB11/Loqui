@@ -1,5 +1,4 @@
 import { Key, LokaliseApi } from "@lokalise/node-api";
-import { group } from "console";
 import _ from "lodash";
 
 let IS_LOCKED = false;

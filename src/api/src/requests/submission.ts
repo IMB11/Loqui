@@ -8,11 +8,19 @@ import _ from "lodash";
 import { transformLocaleArray } from "../lang_map.js";
 import blacklist from "../blacklist.js";
 
-function delay(milliseconds) {
+function delay(milliseconds: number) {
   return new Promise(resolve => {
     setTimeout(resolve, milliseconds);
   });
 }
+
+const finalizationTasks: any[] = [];
+
+setInterval(async () => {
+  if (finalizationTasks.length === 0) return;
+  const task = finalizationTasks.shift();
+  await task();
+}, 500)
 
 // Exclude file languages.
 async function excludeFileLanguages(lokalise: LokaliseApi, project_id: string, table: { [filename: string]: string[] }, modrinthTable: { [filename: string]: string | undefined }) {
@@ -87,9 +95,8 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
   const fileProcessed: { [filename: string]: string[] } = {};
   const modrinthTable: { [filename: string]: string | undefined } = {};
 
-  console.log(body);
-
   // Process each submission.
+  let processes = [];
   for (const submission of body) {
     let namespace = submission.namespace;
 
@@ -135,17 +142,28 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
     const filename = `${submission.namespace}/${hashSubmission.jarVersion}.json`;
 
-    processed.push({
-      data: Buffer.from(stringData).toString("base64"),
-      filename: filename,
-      lang_iso: "en_us",
-      apply_tm: true,
-      format: "json",
-      skip_detect_lang_iso: true,
-      distinguish_by_file: true,
-      convert_placeholders: false,
-      slashn_to_linebreak: true,
-    });
+    while (true) {
+      try {
+        logger.debug(`Uploading file ${filename}`);
+        const processResult = await lokalise.files().upload(project_id, {
+          data: Buffer.from(stringData).toString("base64"),
+          filename: filename,
+          lang_iso: "en_us",
+          apply_tm: true,
+          format: "json",
+          skip_detect_lang_iso: true,
+          distinguish_by_file: true,
+          convert_placeholders: false,
+          slashn_to_linebreak: true,
+        });
+        processes.push(processResult.process_id);
+        break;
+      } catch (e) {
+        logger.error(`Error uploading ${filename}: Probably rate-limited. Retrying in 0.5 seconds.`);
+        await delay(500);
+        continue;
+      }
+    }
 
     fileProcessed[filename] = submission.providedLocales;
 
@@ -158,25 +176,31 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
   res.send("ok");
 
-  for (const process of processed) {
+  finalizationTasks.push(async () => {
     try {
-      logger.debug(`Uploading file ${process.filename}`);
-      await lokalise.files().upload(project_id, process);
-      await delay(1000 / 6)
-    } catch (e) {
-      logger.error(`Error uploading file ${process.filename}: ${e}`);
-    }
-  }
+      // Wait until all relevant processes are done.
+      while (true) {
+        logger.debug("Checking processes...");
+        const processesActive = await lokalise.queuedProcesses().list({ project_id, limit: 500 });
+        const incomplete = _.filter(processesActive.items, (process: QueuedProcess) => {
+          return processes.includes(process.process_id) && !["finished", "failed", "cancelled"].includes(process.status);
+        });
 
-  try {
-    await delay(1.25 * 60 * 1000);
-    logger.debug("Excluding file languages...");
-    await excludeFileLanguages(lokalise, project_id, fileProcessed, modrinthTable);
-    logger.debug("Managing duplicates...");
-    await manageDuplicates(lokalise, project_id);
-    logger.debug("Done managing duplicates.");
-  } catch (e) {
-    logger.error(`Error managing:`);
-    logger.error(e);
-  }
+        if (incomplete.length === 0) {
+          break;
+        }
+
+        await delay(1000);
+      }
+
+      logger.debug("Excluding file languages...");
+      await excludeFileLanguages(lokalise, project_id, fileProcessed, modrinthTable);
+      logger.debug("Managing duplicates...");
+      await manageDuplicates(lokalise, project_id);
+      logger.debug("Done managing duplicates.");
+    } catch (e) {
+      logger.error(`Error managing:`);
+      logger.error(e);
+    }
+  })
 }
