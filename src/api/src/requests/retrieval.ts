@@ -44,6 +44,11 @@ export async function retrieveTranslations(req: Request, res: Response) {
 
     const globResult = globSync(`./repo/**/${hashObj.namespace}/${hashObj.jarVersion}.json`);
 
+    if(!existsSync(`./repo/en_us/${hashObj.namespace}/${hashObj.jarVersion}.json`)) {
+      logger.error(`No base translation file found for ${hashObj.namespace}-${hashObj.jarVersion}.json`);
+      continue;
+    }
+
     // For each globResult, check if the translation file has the same number of keys as the root ./repo/en_us/<namespace>/<version>.json file.
     // If not, remove the file from the list.
     const baseData = JSON.parse(readFileSync(`./repo/en_us/${hashObj.namespace}/${hashObj.jarVersion}.json`, "utf-8"));

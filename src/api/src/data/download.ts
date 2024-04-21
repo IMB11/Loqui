@@ -58,6 +58,7 @@ export async function download(language_isos: string[], project_id: string, loka
             placeholder_format: "printf"
           })
         });
+        break;
       } catch (e) {
         tries++;
         if(tries === 3) {
