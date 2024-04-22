@@ -10,7 +10,7 @@ import { db } from "./data/persistence.js";
 import { config } from "./config.js";
 import { download } from "./data/download.js";
 import { retrieveTranslations } from "./requests/retrieval.js";
-import { copyFileSync, readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
+import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
 import manageDuplicates from "./processes/duplicates.js";
 
 const project_id = config.lokalise_project_id;
@@ -103,6 +103,7 @@ try {
 
     // Backup .data/db.sqlite every 4 hours.
     setInterval(() => {
+      mkdirSync("./data/backups", { recursive: true });
       copyFileSync("./data/db.sqlite", `./data/backups/db-${Date.now()}.sqlite`);
 
       // Delete any backups older than 4 days.
