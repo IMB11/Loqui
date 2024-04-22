@@ -30,7 +30,7 @@ try {
     const language_isos = (await lokalise.languages().list({ project_id, limit: 500 })).items.map(lang => lang.lang_iso);
 
     logger.info("Downloading translations...");
-    await download(language_isos, project_id, lokalise);
+    // await download(language_isos, project_id, lokalise);
   
     app.use(express.static("public"));
     app.use(json({ limit: '5mb' }));

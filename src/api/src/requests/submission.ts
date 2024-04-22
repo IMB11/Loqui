@@ -176,7 +176,7 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
       // Wait until all relevant processes are done.
 
       if(processes.length === 0) {
-        logger.info(`Submission from ${req.ip} did not contain any valid submissions.`)
+        logger.info(`Submission did not contain any valid submissions.`)
         return;
       }
 
@@ -200,7 +200,7 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
       logger.debug("Managing duplicates...");
       await manageDuplicates(lokalise, project_id);
-      logger.info(`Submission from ${req.ip} has been processed and completed.`)
+      logger.info(`Submission has been processed and completed.`)
     } catch (e) {
       logger.error(`Error managing:`);
       logger.error(e);
