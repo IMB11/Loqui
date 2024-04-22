@@ -39,12 +39,12 @@ export async function retrieveTranslations(req: Request, res: Response) {
       continue;
     }
     
-    logger.info(`Retrieving translations for ${hashObj.namespace}-${hashObj.jarVersion}.json`)
+    logger.debug(`Retrieving translations for ${hashObj.namespace}-${hashObj.jarVersion}.json`)
 
     const globResult = globSync(`./repo/**/${hashObj.namespace}/${hashObj.jarVersion}.json`);
 
     if(!existsSync(`./repo/en_us/${hashObj.namespace}/${hashObj.jarVersion}.json`)) {
-      logger.error(`No base translation file found for ${hashObj.namespace}-${hashObj.jarVersion}.json`);
+      logger.debug(`No base translation file found for ${hashObj.namespace}-${hashObj.jarVersion}.json`);
       continue;
     }
 
@@ -60,7 +60,7 @@ export async function retrieveTranslations(req: Request, res: Response) {
       const fileContents = readFileSync(path, "utf-8")
       const data = JSON.parse(fileContents);
       if(Object.keys(data).length !== Object.keys(baseData).length) {
-        logger.warn(`File ${path} has a different number of keys than the base translation file. Ignoring.`);
+        logger.debug(`File ${path} has a different number of keys than the base translation file. Ignoring.`);
         filesToRemove.push(path);
       }
     }
@@ -68,7 +68,7 @@ export async function retrieveTranslations(req: Request, res: Response) {
     _.remove(globResult, path => filesToRemove.includes(path));
 
     if(globResult.length === 0) {
-      logger.error(`No file found for ${hashObj.namespace}-${hashObj.jarVersion}.json`);
+      logger.debug(`No file found for ${hashObj.namespace}-${hashObj.jarVersion}.json`);
       continue;
     }
 

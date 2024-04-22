@@ -28,10 +28,9 @@ try {
     const app = express.default();
 
     const language_isos = (await lokalise.languages().list({ project_id, limit: 500 })).items.map(lang => lang.lang_iso);
-    download(language_isos, project_id, lokalise);
-  
-    // const keys = await lokalise.keys().list({ project_id, limit: 5000 });
-    // await lokalise.keys().bulk_delete(keys.items.map(key => key.key_id), { project_id })
+
+    logger.info("Downloading translations...");
+    await download(language_isos, project_id, lokalise);
   
     app.use(express.static("public"));
     app.use(json({ limit: '5mb' }));
@@ -70,21 +69,21 @@ try {
     });
     //#endregion
   
-    // app.post("/api/v2/submit", rateLimit({
-    //   windowMs: 30 * 60 * 1000,
-    //   max: 15,
-    //   standardHeaders: true,
-    // }), (req, res) => {
-    //   submitTranslationRequest(lokalise, project_id, req, res);
-    // });
+    app.post("/api/v2/submit", rateLimit({
+      windowMs: 30 * 60 * 1000,
+      max: 15,
+      standardHeaders: true,
+    }), (req, res) => {
+      submitTranslationRequest(lokalise, project_id, req, res);
+    });
   
-    // app.post("/api/v2/retrieve", rateLimit({
-    //   windowMs: 30 * 60 * 1000,
-    //   max: 15,
-    //   standardHeaders: true,
-    // }), (req, res) => {
-    //   retrieveTranslations(req, res);
-    // })
+    app.post("/api/v2/retrieve", rateLimit({
+      windowMs: 30 * 60 * 1000,
+      max: 15,
+      standardHeaders: true,
+    }), (req, res) => {
+      retrieveTranslations(req, res);
+    })
   
     app.get("/", (req, res) => {
       res.sendFile("index.html", { root: "./public" })
@@ -98,6 +97,7 @@ try {
     
     // Every hour.
     setInterval(() => {
+      logger.info("Downloading translations...");
       download(language_isos, project_id, lokalise);
     }, 1000 * 60 * 60)
 

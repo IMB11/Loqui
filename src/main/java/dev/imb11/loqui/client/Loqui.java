@@ -1,6 +1,7 @@
 package dev.imb11.loqui.client;
 
 import dev.imb11.loqui.client.cache.CacheManager;
+import dev.imb11.loqui.client.cache.HashManager;
 import dev.imb11.loqui.client.i18n.LanguageIndexer;
 import dev.imb11.loqui.client.i18n.LoquiDownloader;
 import dev.imb11.loqui.client.i18n.LoquiUploader;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
@@ -21,7 +23,7 @@ public class Loqui implements PreLaunchEntrypoint {
     public static final ExecutorService LOQUI_IO_POOL = Executors.newFixedThreadPool(2);
 
     public static Logger LOGGER = LoggerFactory.getLogger("Loqui");
-    public static String API_ROOT = "https://loqui.imb11.dev";
+    public static String API_ROOT = "http://localhost:9182";
 
     @Override
     public void onPreLaunch() {
@@ -31,12 +33,6 @@ public class Loqui implements PreLaunchEntrypoint {
             API_ROOT = "http://localhost:9182";
         }
 
-        try {
-            CacheManager.validateCache();
-        } catch (IOException e) {
-            LOGGER.error("Failed to validate cache. This is a critical error. Please report this to https://github.com/IMB11/Loqui");
-        }
-
         LanguageIndexer indexer = new LanguageIndexer(FabricLoader.getInstance().getGameDir().resolve("mods/"));
         var entries = indexer.index();
 
@@ -44,10 +40,19 @@ public class Loqui implements PreLaunchEntrypoint {
             ArrayList<String> namespaceHashes = new ArrayList<>();
             for (LanguageIndexer.NamespaceTranslationEntry namespaceTranslationEntry : entry.translationEntry()) {
                 String content = namespaceTranslationEntry.englishLocaleContent;
-                namespaceHashes.add(DigestUtils.sha512Hex(content));
+                String hash = DigestUtils.sha512Hex(content);
+                HashManager.setHash(namespaceTranslationEntry.namespace, hash);
+                namespaceHashes.add(hash);
             }
+
             return namespaceHashes.toArray(String[]::new);
         }).flatMap(Stream::of).toArray(String[]::new);
+
+        try {
+            CacheManager.validateCache();
+        } catch (IOException e) {
+            LOGGER.error("Failed to validate cache. This is a critical error. Please report this to https://github.com/IMB11/Loqui");
+        }
 
         LoquiDownloader.download(hashes);
         LoquiUploader.upload(entries);

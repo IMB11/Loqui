@@ -22,9 +22,14 @@ public class CacheManager {
     public static final Path CACHE_DIR;
     private static final Logger LOGGER = LoggerFactory.getLogger("Loqui/CacheManager");
     private static final Gson gson = new Gson();
+    private static final ArrayList<String> CACHED_HASHES = new ArrayList<>();
 
     static {
         CACHE_DIR = FabricLoader.getInstance().getGameDir().resolve(".loqui_translations/");
+
+        if (!CACHE_DIR.toFile().exists()) {
+            CACHE_DIR.toFile().mkdirs();
+        }
     }
 
     public static void validateCache() throws IOException {
@@ -64,6 +69,8 @@ public class CacheManager {
                 // If the hashes do not match, delete the cache entry.
                 if (!namespaceHash.equals(actualHash)) {
                     Files.delete(CACHE_DIR.resolve("assets/" + namespace));
+                } else {
+                    CACHED_HASHES.add(namespaceHash);
                 }
             }
         }
@@ -76,6 +83,7 @@ public class CacheManager {
 
     public static void submitContent(String namespace, String localeHash, String language, String content) throws IOException {
         Path cachePath = CACHE_DIR.resolve("assets/" + namespace + "/lang/");
+
         if (!cachePath.toFile().exists()) {
             cachePath.toFile().mkdirs();
         }
@@ -85,6 +93,11 @@ public class CacheManager {
         JsonObject object = new JsonObject();
         object.addProperty("hash", localeHash);
         Files.writeString(CACHE_DIR.resolve("assets/" + namespace + "/namespace_data_loqui.json"), gson.toJson(object));
+        CACHED_HASHES.add(localeHash);
+    }
+
+    public static boolean isCached(String hash) {
+        return CACHED_HASHES.contains(hash);
     }
 
     public static Set<String> getCachedNamespaces() {

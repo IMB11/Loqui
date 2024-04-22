@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import Submission, { getBaseLocaleHash, getModrinthFile } from "../data/submission.js";
 import { LokaliseApi, QueuedProcess } from "@lokalise/node-api";
-import { addHash, Hash } from "../data/persistence.js";
+import { addHash, getHashObject, Hash } from "../data/persistence.js";
 import manageDuplicates from "../processes/duplicates.js";
 import logger from "../logger.js";
 import _ from "lodash";
@@ -73,23 +73,25 @@ async function excludeFileLanguages(lokalise: LokaliseApi, project_id: string, t
 export async function submitTranslationRequest(lokalise: LokaliseApi, project_id: string, req: Request, res: Response) {
   const body: Submission[] = req.body;
 
-    // Validate body.
-    if (!Array.isArray(body)) {
+  // Validate body.
+  if (!Array.isArray(body)) {
+    return res.status(400).send({
+      message: "Body must be an array of Submission objects.",
+      error: "invalid_body"
+    });
+  }
+
+  // Validate each submission.
+  for (const submission of body) {
+    if (!submission.namespace || !submission.jarHash || !submission.providedLocales || !submission.baseLocaleData || !submission.jarVersion) {
       return res.status(400).send({
-        message: "Body must be an array of Submission objects.",
-        error: "invalid_body"
+        message: "Each submission must have a modname, modid, jarHash, providedLocales, and baseLocaleData.",
+        error: "invalid_submission"
       });
     }
+  }
 
-    // Validate each submission.
-    for (const submission of body) {
-      if (!submission.namespace || !submission.jarHash || !submission.providedLocales || !submission.baseLocaleData || !submission.jarVersion) {
-        return res.status(400).send({
-          message: "Each submission must have a modname, modid, jarHash, providedLocales, and baseLocaleData.",
-          error: "invalid_submission"
-        });
-      }
-    }
+  logger.info(`Recieved ${body.length} submissions.`);
 
   finalizationTasks.push(async () => {
     const fileProcessed: { [filename: string]: string[] } = {};
@@ -101,7 +103,7 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
       let namespace = submission.namespace;
 
       if (blacklist.includes(namespace)) {
-        logger.info(`Skipping submission for ${namespace} due to blacklist.`);
+        logger.debug(`Skipping submission for ${namespace} due to blacklist.`);
         continue;
       }
 
@@ -122,13 +124,9 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
       // Verify that a file doesn't already exist with the same hash.
       const localeFileHash = getBaseLocaleHash(submission);
+      const existingHash = getHashObject(localeFileHash);
 
-      const existingFile = await lokalise.files().list({
-        project_id,
-        filter_filename: localeFileHash
-      });
-
-      if (existingFile.items.length > 0) {
+      if(existingHash) {
         continue;
       }
 
@@ -176,7 +174,14 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
     try {
       // Wait until all relevant processes are done.
-      console.log("Waiting for processes to finish... (This may take a while...)")
+
+      if(processes.length === 0) {
+        logger.info(`Submission from ${req.ip} did not contain any valid submissions.`)
+        return;
+      }
+
+      logger.info("Waiting for processes to finish... (This may take a while...)")
+
       while (true) {
         const processesActive = await lokalise.queuedProcesses().list({ project_id, limit: 500 });
         const incomplete = _.filter(processesActive.items, (process: QueuedProcess) => {
@@ -195,12 +200,12 @@ export async function submitTranslationRequest(lokalise: LokaliseApi, project_id
 
       logger.debug("Managing duplicates...");
       await manageDuplicates(lokalise, project_id);
-      logger.debug("Submission complete.")
+      logger.info(`Submission from ${req.ip} has been processed and completed.`)
     } catch (e) {
       logger.error(`Error managing:`);
       logger.error(e);
     }
   });
 
-  res.status(200).send({ status: "Your submission is being processed."})
+  res.status(200).send({ status: "Your submission is being processed." })
 }

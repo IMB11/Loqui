@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 import static dev.imb11.loqui.client.Loqui.LOQUI_IO_POOL;
@@ -20,6 +21,9 @@ public class LoquiDownloader {
     private static final Logger LOGGER = LoggerFactory.getLogger("Loqui/Downloader");
     public static void download(String[] hashes) {
         Gson gson = new Gson();
+
+        hashes = Arrays.stream(hashes).filter(hash -> !CacheManager.isCached(hash)).toArray(String[]::new);
+        
         String jsonData = gson.toJson(hashes);
 
         // Send jsonData to API_ROOT/api/v2/retrieve

@@ -38,6 +38,6 @@
     "tslog": "^4.9.2",
     "typescript": "^5.1.6",
     "unzip": "^0.1.11",
-    "unzipper": "^0.11.3"
+    "unzipper": "^0.11.4"
   }
 }

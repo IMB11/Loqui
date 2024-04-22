@@ -5,6 +5,7 @@ import { Extract } from "unzipper";
 import logger from "../logger.js";
 import _ from "lodash";
 import { glob, globSync } from "glob";
+import { group } from "node:console";
 
 let downloadLock = false;
 
@@ -35,72 +36,39 @@ export async function download(language_isos: string[], project_id: string, loka
 
   logger.debug(`Recieved ${hashObjs.length} hash objects.`);
 
-  const downloadPromises: any[] = [];
-  for (const hashObj of hashObjs) {
+  const downloadPromises: string[] = hashObjs.map((hashObj) => {
     const filename = `${hashObj.namespace}/${hashObj.jarVersion}.json`;
-
-    logger.debug(`Checking for ${filename}...`);
-
-    const excludedLangs = hashObj.ignoredLocales;
-    const languages = language_isos.filter(lang => !excludedLangs.includes(lang));
-
-    let tries = 3;
-    while (true) {
-      try {
-        downloadPromises.push({
-          namespace: hashObj.namespace,
-          version: hashObj.jarVersion,
-          filePath: `./repo/${filename}`,
-          downloadPromise: await lokalise.files().download(project_id, {
-            format: "json",
-            filter_langs: languages,
-            filter_filenames: [filename],
-            export_empty_as: "skip",
-            placeholder_format: "printf"
-          })
-        });
-        break;
-      } catch (e) {
-        tries++;
-        if (tries === 3) {
-          logger.error("Failed to download translations. Skipping...");
-          break;
-        }
-
-        logger.error("Failed to download translations. Retrying in 0.5 seconds... " + tries + "/3");
-        await delay(0.5);
-        continue;
-      }
-    }
-  }
-
-  logger.debug(`Recieved ${downloadPromises.length} download promises.`)
-
-  // Await promise.all for downloadPromises.[*].downloadPromise
-  const results = downloadPromises.map(downloadPromise => {
-    logger.info(`Downloading ${downloadPromise.namespace}-${downloadPromise.version}.json...`)
-    return {
-      namespace: downloadPromise.namespace,
-      version: downloadPromise.version,
-      bundle_url: downloadPromise.downloadPromise.bundle_url,
-      filePath: downloadPromise.filePath
-    };
+    return filename;
   });
+
+  const downloadChunks = _.chunk(downloadPromises, 10);
+
+  logger.info(`Downloading ${downloadPromises.length} files in ${downloadChunks.length} chunks...`);
+
+  let chunkNumber = 1;
 
   mkdirSync("./temp", { recursive: true });
   mkdirSync("./repo", { recursive: true });
 
-  for (const result of results) {
+  for (const chunk of downloadChunks) {
+    logger.info(`Downloading chunk[${chunkNumber}] of ${chunk.length} files...`);
+    chunkNumber++;
+    const result = await lokalise.files().download(project_id, {
+      format: "json",
+      filter_filenames: chunk,
+      export_empty_as: "skip",
+      placeholder_format: "printf"
+    });
+
     if (result.bundle_url) {
       // Download bundle into temp folder and extract it into `./repo` folder, preserving the directory structure.
-      const targetPath = `./temp/${result.namespace}-${result.version}.zip`;
-      logger.debug(result.bundle_url);
+      const targetPath = `./temp/download-result.zip`;
       const data = await fetch(result.bundle_url).then(res => res.arrayBuffer());
 
       writeFileSync(targetPath, Buffer.from(data));
 
       // Extract zip into `./repo` folder.
-      const readStream = createReadStream(`./temp/${result.namespace}-${result.version}.zip`).pipe(Extract({ path: `./repo` }));
+      const readStream = createReadStream(`./temp/download-result.zip`).pipe(Extract({ path: `./repo` }));
     }
   }
 
@@ -112,7 +80,29 @@ export async function download(language_isos: string[], project_id: string, loka
   globResult.map(value => {
     const fileContents = readFileSync(value, "utf-8");
     try {
-      JSON.parse(fileContents);
+      const content = JSON.parse(fileContents);
+
+      // Delete file if all key values are empty.
+      const keys = Object.keys(content);
+      let allEmpty = true;
+      for (const key of keys) {
+        if (content[key] !== "") {
+          allEmpty = false;
+          break;
+        }
+
+        // Delete empty keys.
+        if (content[key] === "") {
+          delete content[key];
+        }
+      }
+
+      if (allEmpty) {
+        logger.warn(`File ${value} is empty. Deleting.`);
+        rmSync(value);
+      } else {
+        writeFileSync(value, JSON.stringify(content, null, 2));
+      }
     } catch (e) {
       logger.error(`File ${value} is not valid JSON. Deleting.`);
       rmSync(value);
