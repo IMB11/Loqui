@@ -5,7 +5,6 @@ import { Extract } from "unzipper";
 import logger from "../logger.js";
 import _ from "lodash";
 import { glob, globSync } from "glob";
-import { group } from "node:console";
 
 let downloadLock = false;
 
