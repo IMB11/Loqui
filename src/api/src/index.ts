@@ -46,9 +46,6 @@ try {
 
     const language_isos = (await lokalise.languages().list({ project_id, limit: 500 })).items.map(lang => lang.lang_iso);
 
-    logger.info("Downloading translations...");
-    await download(language_isos, project_id, lokalise);
-
     app.use(express.static("public"));
     app.use(json({ limit: '5mb' }));
 
@@ -110,6 +107,8 @@ try {
 
     app.listen(config.port_number, () => {
       logger.info("Server is running on port " + config.port_number);
+      logger.info("Downloading translations...");
+      download(language_isos, project_id, lokalise);
     });
 
     // Every hour.
