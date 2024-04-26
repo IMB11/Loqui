@@ -135,12 +135,13 @@ try {
 
       const leaderboard = leaderboardEntries.map(entry => {
         const contributor = contributors.items.find(contributor => contributor.email === entry.email);
+        if(!contributor) return null;
         return {
           name: contributor.fullname,
           avatar: `https://gravatar.com/avatar/${shaHash.update(contributor.email.trim().toLowerCase()).digest("hex")}`,
           contributions: entry.contributions
         }
-      });
+      }).filter(entry => entry !== null) as { name: string, avatar: string, contributions: number }[];
 
       return res.send(leaderboard);
     });
