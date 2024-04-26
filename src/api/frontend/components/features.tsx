@@ -31,10 +31,10 @@ export default function Features() {
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         <div className="pt-12 md:pt-20">
           <div className="max-w-3xl mx-auto text-center pb-12 md:pb-16">
-            <h1 className="h2 mb-4">Powered By <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-700 to-orange-500">Lokalise</span></h1>
-            <p className="text-xl text-gray-600">Loqui wouldn't be possible without Lokalise's amazing support! Their donation of an enterprise plan empowers us to manage the vast amount of translations for the Minecraft community. Thank you!</p>
+            <h1 className="h2 mb-4" data-aos="zoom-y-out">Powered By <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-700 to-orange-500">Lokalise</span></h1>
+            <p className="text-xl text-gray-600" data-aos="zoom-y-out">Loqui wouldn't be possible without Lokalise's amazing support! Their donation of an enterprise plan empowers us to manage the vast amount of translations for the Minecraft community. Thank you!</p>
             <br />
-            <div className="max-w-xs mx-auto sm:max-w-none sm:flex sm:justify-center" data-aos="zoom-y-out" data-aos-delay="300">
+            <div data-aos="zoom-y-out" className="max-w-xs mx-auto sm:max-w-none sm:flex sm:justify-center" data-aos-delay="300">
               <div>
                 <a className="btn text-white bg-orange-600 hover:bg-orange-700 w-full mb-4 sm:w-auto sm:mb-0" target="_blank" href="https://lokalise.com/solutions/for-managers">Read More</a>
               </div>

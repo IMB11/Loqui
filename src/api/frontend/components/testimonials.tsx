@@ -1,7 +1,34 @@
+"use client";
+
 import Image from 'next/image'
-import TestimonialImage from '@/public/images/testimonial.jpg'
+import { useEffect, useState } from 'react';
 
 export default function Testimonials() {
+
+  // Fetch from https://loqui.imb11.dev/api/v2/leaderboard (GET)
+  const [leaderboard, setLeaderboard] = useState([]);
+
+  useEffect(() => {
+    fetch('https://loqui.imb11.dev/api/v2/leaderboard')
+      .then(response => response.json())
+      .then(data => {
+        setLeaderboard(data.sort((a: { contributions: number; }, b: { contributions: number; }) => b.contributions - a.contributions).slice(0, 6).map((user: any) => {
+          return (
+            <div data-aos="zoom-y-out" className="flex items-center justify-center py-4 px-6 bg-gray-200 shadow rounded-lg">
+              <div className="flex-shrink-0 mr-4">
+                <img className="w-12 h-12 rounded-full" src={user.avatar} alt={user.name} />
+              </div>
+              <div>
+                <div className="font-bold">{user.name}</div>
+                <div className="text-gray-600">{user.contributions} contributions</div>
+              </div>
+            </div>
+          )
+        }));
+      })
+      .catch(error => console.error(error));
+  }, []);
+
   return (
     <section className="relative">
 
@@ -66,10 +93,17 @@ export default function Testimonials() {
                   <span>Translator and Proofreader</span>
                 </div>
               </div>
-
             </div>
           </div>
 
+          {/* Leaderboard */}
+          {/* Fetch from https://loqui.imb11.dev/api/v2/leaderboard (GET) */}
+          <div className="max-w-3xl mx-auto mt-16">
+            <h3 data-aos="zoom-y-out" className="h3 text-center mb-8">Contributors</h3>
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {leaderboard}
+            </div>
+          </div>
         </div>
       </div>
     </section>
