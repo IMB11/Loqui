@@ -10,10 +10,32 @@ export type Hash = {
   ignoredLocales: string[];
 }
 
+export type LeaderboardInformation = {
+  email: string;
+  contributions: number;
+}
+
+const Leaderboard = db.collection<LeaderboardInformation>("leaderboard")
 const HashStorage = db.collection<Hash>("hashStorage")
 
 export function getAllHashes(): Hash[] {
   return HashStorage.query().find();
+}
+
+export function getLeaderboard(): LeaderboardInformation[] {
+  return Leaderboard.query().find();
+}
+
+export function bumpContribution(email: string): LeaderboardInformation {
+  const existing = Leaderboard.query().equalTo("email", email).first();
+
+  if(existing) {
+    existing.contributions += 1;
+    Leaderboard.update(existing._id, existing);
+    return existing;
+  }
+
+  return Leaderboard.insert({ email, contributions: 1 });
 }
 
 /**

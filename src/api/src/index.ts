@@ -6,12 +6,14 @@ const { json } = bodyParser;
 import { LokaliseApi } from "@lokalise/node-api";
 import { submitTranslationRequest } from "./requests/submission.js";
 import logger from "./logger.js";
-import { db } from "./data/persistence.js";
+import { bumpContribution, db, getLeaderboard } from "./data/persistence.js";
 import { config } from "./config.js";
 import { download } from "./data/download.js";
 import { retrieveTranslations } from "./requests/retrieval.js";
 import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
 import manageDuplicates from "./processes/duplicates.js";
+import type { WebhookProjectTranslationUpdated } from "@lokalise/node-api";
+import { createHash } from "node:crypto";
 
 const project_id = config.lokalise_project_id;
 const lokalise = new LokaliseApi({
@@ -103,19 +105,51 @@ try {
       res.sendFile("index.html", { root: "./public" })
     })
 
+    app.post("/api/v2/webhook", async (req, res) => {
+      if(req.headers["X-Secret"] !== config.webhook_password) {
+        return res.status(401).send({ message: "Unauthorized" });
+      }
+      
+      const body = req.body;
+
+      if(req.body.event === "project.translation.updated") {
+        const data = body as WebhookProjectTranslationUpdated;
+        bumpContribution(data.user.email);
+      }
+
+      res.status(200).send({ message: "OK" });
+    });
+
+    app.get("/api/v2/leaderboard", async (req, res) => {
+      const contributors = await lokalise.contributors().list({ project_id, limit: 500 });
+
+      const leaderboardEntries = getLeaderboard();
+
+      const shaHash = createHash("sha256");
+
+      const leaderboard = leaderboardEntries.map(entry => {
+        const contributor = contributors.items.find(contributor => contributor.email === entry.email);
+        return {
+          name: contributor.fullname,
+          avatar: `https://gravatar.com/avatar/${shaHash.update(contributor.email.trim().toLowerCase()).digest("hex")}`,
+          contributions: entry.contributions
+        }
+      });
+
+      return res.send(leaderboard);
+    });
+
     app.set('trust proxy', 1)
 
     app.listen(config.port_number, () => {
       logger.info("Server is running on port " + config.port_number);
-      logger.info("Downloading translations...");
-      download(language_isos, project_id, lokalise);
     });
 
-    // Every hour.
+    // Every 24 hours.
     setInterval(() => {
       logger.info("Downloading translations...");
       download(language_isos, project_id, lokalise);
-    }, 1000 * 60 * 60)
+    }, 1000 * 60 * 60 * 24)
 
     // Backup .data/db.sqlite every 4 hours.
     setInterval(() => {
