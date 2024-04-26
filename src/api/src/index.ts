@@ -120,10 +120,16 @@ try {
       res.status(200).send({ message: "OK" });
     });
 
+    let contributorFetchDate = Date.now();
+    let contributors = await lokalise.contributors().list({ project_id, limit: 500 });
     app.get("/api/v2/leaderboard", async (req, res) => {
-      const contributors = await lokalise.contributors().list({ project_id, limit: 500 });
-
       const leaderboardEntries = getLeaderboard();
+
+      // If fetch date is older than 2 hours, fetch new contributors.
+      if(Date.now() - contributorFetchDate > 1000 * 60 * 60 * 2) {
+        contributors = await lokalise.contributors().list({ project_id, limit: 500 });
+        contributorFetchDate = Date.now();
+      }
 
       const shaHash = createHash("sha256");
 
