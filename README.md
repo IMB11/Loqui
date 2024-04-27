@@ -19,7 +19,7 @@ Again, include Loqui in your modpack and you can allow your users to play in the
 It's recommended you encourage your community to join the [Translation Project](https://loqui.imb11.dev/) in order to improve the quality and quantity of translations - the more the merrier!
 
 ### Badges:
-**Loqui Badge by [rotgruengelb](https://github.com/rotgruengelb):**
+**Loqui Badges by [rotgruengelb](https://github.com/rotgruengelb):**
 > [![Dark Looqui Badge](https://raw.githubusercontent.com/rotgruengelb/some-badges/46c46090db41c2bea2b1e864c32702e6c9a2adb0/Loqui/loqui_badges-dark/cozy_vector.svg)](https://github.com/rotgruengelb/some-badges/tree/main/Loqui/loqui_badges-dark) [![Loqui Badge](https://raw.githubusercontent.com/rotgruengelb/some-badges/46c46090db41c2bea2b1e864c32702e6c9a2adb0/Loqui/loqui_badges/cozy_vector.svg)](https://github.com/rotgruengelb/some-badges/tree/main/Loqui/loqui_badges)
 >
 > [(More Alternate Badges here)](https://github.com/rotgruengelb/some-badges/tree/main/Loqui)
