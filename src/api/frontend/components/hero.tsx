@@ -1,4 +1,41 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 export default function Hero() {
+  const validAllStrings = [
+    "Translations for ALL.",
+    "Переводы для ВСЕХ.",
+    "Traductions pour TOUS.",
+    "Traducciones para TODOS.",
+    "Übersetzungen für ALLE.",
+    "Traduzioni per TUTTI.",
+    "全ての人の 翻訳。",
+    "모두를 위한 번역.",
+    "Todos os idiomas.",
+    "Traduções para TODOS.",
+    "ການແປສໍາລັບ ທຸກຄົນ."
+  ]
+  const [allString, setAllString] = useState(["Translations for", "ALL."]);
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const string = validAllStrings[index];
+      setIndex((index + 1) % validAllStrings.length);
+      const split = string.split(" ")
+
+      // Word in capital is "ALL" - extract it.
+      const all = split[split.length - 1];
+      const rest = split.slice(0, split.length - 1).join(" ");
+      setAllString([rest, all]);
+    }, 750);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [index, allString]);
+
   return (
     <section className="relative">
 
@@ -26,7 +63,7 @@ export default function Hero() {
 
           {/* Section header */}
           <div className="text-center pb-12 md:pb-16">
-            <h1 className="text-5xl md:text-6xl font-extrabold leading-tighter tracking-tighter mb-4" data-aos="zoom-y-out">Translations for <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">all.</span></h1>
+            <h1 className="text-5xl md:text-6xl font-extrabold leading-tighter justify-center text-center tracking-tighter mb-4" data-aos="zoom-y-out" style={{ whiteSpace: "nowrap" }}>{allString[0]} <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">{allString[1]}</span></h1>
             <div className="max-w-3xl mx-auto">
               <p className="text-xl text-gray-600 mb-8" data-aos="zoom-y-out" data-aos-delay="150">Loqui provides free, open-source, and community-driven translations for ALL Minecraft mods.</p>
               <div className="max-w-xs mx-auto sm:max-w-none sm:flex sm:justify-center" data-aos="zoom-y-out" data-aos-delay="300">

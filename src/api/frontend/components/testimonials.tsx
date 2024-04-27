@@ -12,15 +12,17 @@ export default function Testimonials() {
     fetch('https://loqui.imb11.dev/api/v2/leaderboard')
       .then(response => response.json())
       .then(data => {
-        setLeaderboard(data.sort((a: { contributions: number; }, b: { contributions: number; }) => b.contributions - a.contributions).slice(0, 6).map((user: any) => {
+        setLeaderboard(data.sort((a: { contributions: number; }, b: { contributions: number; }) => b.contributions - a.contributions).map((user: any) => {
+          const formattedNumber = new Intl.NumberFormat('en-US').format(user.contributions);
+          
           return (
-            <div data-aos="zoom-y-out" className="flex items-center justify-center py-4 px-6 bg-gray-200 shadow rounded-lg">
+            <div data-aos="zoom-y-out" className="flex py-4 px-6 bg-gray-200 shadow rounded-lg">
               <div className="flex-shrink-0 mr-4">
                 <img className="w-12 h-12 rounded-full" src={user.avatar} alt={user.name} />
               </div>
               <div>
                 <div className="font-bold">{user.name}</div>
-                <div className="text-gray-600">{user.contributions} contributions</div>
+                <div className="text-gray-600">{formattedNumber} translations</div>
               </div>
             </div>
           )
@@ -100,7 +102,8 @@ export default function Testimonials() {
           {/* Fetch from https://loqui.imb11.dev/api/v2/leaderboard (GET) */}
           <div className="max-w-3xl mx-auto mt-16">
             <h3 data-aos="zoom-y-out" className="h3 text-center mb-8">Contributors</h3>
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Leaderboard, 1 per row */}
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
               {leaderboard}
             </div>
           </div>
