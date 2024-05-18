@@ -6,7 +6,7 @@ import logger from "../logger.js";
 import _ from "lodash";
 import { glob, globSync } from "glob";
 
-let downloadLock = false;
+export let downloadLock = false;
 
 function delay(milliseconds: number) {
   return new Promise(resolve => {

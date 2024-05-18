@@ -7,6 +7,7 @@ import logger from "../logger.js";
 import _ from "lodash";
 import { transformLocaleArray } from "../lang_map.js";
 import blacklist from "../blacklist.js";
+import { downloadLock } from "../data/download.js";
 
 function delay(milliseconds: number) {
   return new Promise(resolve => {
@@ -72,6 +73,13 @@ async function excludeFileLanguages(lokalise: LokaliseApi, project_id: string, t
 
 export async function submitTranslationRequest(lokalise: LokaliseApi, project_id: string, req: Request, res: Response) {
   const body: Submission[] = req.body;
+
+  if(downloadLock) {
+    return res.status(503).send({
+      message: "Server is currently busy processing translation downloads. Please try again later.",
+      error: "server_busy_downloads"
+    });
+  }
 
   // Validate body.
   if (!Array.isArray(body)) {

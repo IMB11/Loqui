@@ -5,11 +5,19 @@ import { existsSync, readFileSync } from "fs";
 import _ from "lodash";
 import logger from "../logger.js";
 import { globSync } from "glob";
+import { downloadLock } from "../data/download.js";
 
 type RetrievalRequest = string[];
 
 export async function retrieveTranslations(req: Request, res: Response) {
   const data: RetrievalRequest = req.body;
+
+  if(downloadLock) {
+    return res.status(503).send({
+      message: "Translations are currently being downloaded. Please try again later.",
+      error: "translations_downloading"
+    });
+  }
 
   // Verify body.
   if (!Array.isArray(data)) {
