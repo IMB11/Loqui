@@ -80,23 +80,14 @@ export async function download(language_isos: string[], project_id: string, loka
     const fileContents = readFileSync(value, "utf-8");
     try {
       const content = JSON.parse(fileContents);
-
-      // Delete file if all key values are empty.
-      const keys = Object.keys(content);
-      let allEmpty = true;
-      for (const key of keys) {
-        if (content[key] !== "") {
-          allEmpty = false;
-          break;
-        }
-
+      for (const key of Object.keys(content)) {
         // Delete empty keys.
         if (content[key] === "") {
           delete content[key];
         }
       }
 
-      if (allEmpty) {
+      if (Object.keys(content).length === 0) {
         logger.warn(`File ${value} is empty. Deleting.`);
         rmSync(value);
       } else {
@@ -110,8 +101,6 @@ export async function download(language_isos: string[], project_id: string, loka
   })
 
   logger.info("Translations downloaded.");
-
-
 
   downloadLock = false;
 }
