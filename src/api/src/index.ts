@@ -49,7 +49,7 @@ try {
     const language_isos = (await lokalise.languages().list({ project_id, limit: 500 })).items.map(lang => lang.lang_iso);
 
     app.use(express.static("public"));
-    app.use(json({ limit: '5mb' }));
+    app.use(json({ limit: '50mb' }));
 
     //#region Deprecated Functions
     app.post("/bulk-get", rateLimit({

@@ -60,14 +60,18 @@ export async function download(language_isos: string[], project_id: string, loka
     });
 
     if (result.bundle_url) {
-      // Download bundle into temp folder and extract it into `./repo` folder, preserving the directory structure.
-      const targetPath = `./temp/download-result.zip`;
-      const data = await fetch(result.bundle_url).then(res => res.arrayBuffer());
+      try {
+        // Download bundle into temp folder and extract it into `./repo` folder, preserving the directory structure.
+        const targetPath = `./temp/download-result.zip`;
+        const data = await fetch(result.bundle_url).then(res => res.arrayBuffer());
 
-      writeFileSync(targetPath, Buffer.from(data));
+        writeFileSync(targetPath, Buffer.from(data));
 
-      // Extract zip into `./repo` folder.
-      const readStream = createReadStream(`./temp/download-result.zip`).pipe(Extract({ path: `./repo` }));
+        // Extract zip into `./repo` folder.
+        const readStream = createReadStream(`./temp/download-result.zip`).pipe(Extract({ path: `./repo` }));
+      } catch {
+        continue;
+      }
     }
   }
 
