@@ -49,31 +49,74 @@ export async function download(language_isos: string[], project_id: string, loka
   mkdirSync("./temp", { recursive: true });
   mkdirSync("./repo", { recursive: true });
 
-  for (const chunk of downloadChunks) {
-    logger.info(`Downloading chunk[${chunkNumber}] of ${chunk.length} files...`);
-    chunkNumber++;
-    const result = await lokalise.files().download(project_id, {
-      format: "json",
-      filter_filenames: chunk,
-      export_empty_as: "skip",
-      placeholder_format: "printf"
-    });
-
-    if (result.bundle_url) {
-      try {
-        // Download bundle into temp folder and extract it into `./repo` folder, preserving the directory structure.
-        const targetPath = `./temp/download-result.zip`;
-        const data = await fetch(result.bundle_url).then(res => res.arrayBuffer());
-
-        writeFileSync(targetPath, Buffer.from(data));
-
-        // Extract zip into `./repo` folder.
-        const readStream = createReadStream(`./temp/download-result.zip`).pipe(Extract({ path: `./repo` }));
-      } catch {
-        continue;
+  const downloadChunksInParallel = async (chunks: string[][]) => {
+    const maxRetries = 3;
+  
+    const fetchWithRetry = async (url: string, retries: number): Promise<ArrayBuffer> => {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
+          return await response.arrayBuffer();
+        } catch (error) {
+          if (attempt === retries) throw error;
+          logger.warn(`Retrying fetch attempt ${attempt} for URL ${url}...`);
+        }
       }
+    };
+  
+    const downloadWithRetry = async (project_id: string, chunk: string[], retries: number): Promise<void> => {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          const result = await lokalise.files().download(project_id, {
+            format: "json",
+            filter_filenames: chunk,
+            export_empty_as: "skip",
+            placeholder_format: "printf"
+          });
+  
+          if (result.bundle_url) {
+            const targetPath = `./temp/download-result-${attempt}.zip`;
+            const data = await fetchWithRetry(result.bundle_url, retries);
+            writeFileSync(targetPath, Buffer.from(data));
+  
+            // Extract zip into `./repo` folder.
+            const readStream = createReadStream(targetPath).pipe(Extract({ path: `./repo` }));
+            return; // Exit if successful
+          }
+        } catch (error) {
+          if (attempt === retries) {
+            logger.error(`Failed to download or extract chunk after ${retries} attempts:`, error);
+            throw error;
+          } else {
+            logger.warn(`Retrying download attempt ${attempt} for chunk...`);
+          }
+        }
+      }
+    };
+  
+    let chunkNumber = 1;
+  
+    for (let i = 0; i < chunks.length; i += 5) {
+      const chunkGroup = chunks.slice(i, i + 5);
+  
+      await Promise.all(chunkGroup.map(async (chunk, index) => {
+        const currentChunkNumber = chunkNumber + index;
+        logger.info(`Downloading chunk[${currentChunkNumber}] of ${chunk.length} files...`);
+        
+        try {
+          await downloadWithRetry(project_id, chunk, maxRetries);
+        } catch (error) {
+          logger.error(`Failed to process chunk[${currentChunkNumber}] after ${maxRetries} attempts`);
+        }
+      }));
+  
+      chunkNumber += chunkGroup.length;
     }
-  }
+  };
+  
+  // Example usage
+  await downloadChunksInParallel(downloadChunks);
 
   // Validate all JSON files in the `./repo` folder - delete if invalid.
   const globResult = globSync(`./repo/**/**/*.json`);

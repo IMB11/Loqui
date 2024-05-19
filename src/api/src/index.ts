@@ -8,12 +8,12 @@ import { submitTranslationRequest } from "./requests/submission.js";
 import logger from "./logger.js";
 import { bumpContribution, db, getLeaderboard } from "./data/persistence.js";
 import { config } from "./config.js";
-import { download } from "./data/download.js";
+import { download, downloadLock } from "./data/download.js";
 import { retrieveTranslations } from "./requests/retrieval.js";
-import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
-import manageDuplicates from "./processes/duplicates.js";
+import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
 import type { WebhookProjectTranslationUpdated } from "@lokalise/node-api";
 import { createHash } from "node:crypto";
+import cron from 'node-cron';
 
 const project_id = config.lokalise_project_id;
 const lokalise = new LokaliseApi({
@@ -125,8 +125,8 @@ try {
     app.get("/api/v2/leaderboard", async (req, res) => {
       const leaderboardEntries = getLeaderboard();
 
-      // If fetch date is older than 2 hours, fetch new contributors.
-      if(Date.now() - contributorFetchDate > 1000 * 60 * 60 * 2) {
+      // If fetch date is older than 2 hours, fetch new contributors - dont fetch if we're downloading!
+      if(Date.now() - contributorFetchDate > 1000 * 60 * 60 * 2 && !downloadLock) {
         contributors = await lokalise.contributors().list({ project_id, limit: 500 });
         contributorFetchDate = Date.now();
       }
@@ -151,11 +151,10 @@ try {
       download(language_isos, project_id, lokalise);
     });
 
-    // Every 24 hours.
-    setInterval(() => {
+    cron.schedule('0 2 * * *', () => {
       logger.info("Downloading translations...");
       download(language_isos, project_id, lokalise);
-    }, 1000 * 60 * 60 * 24)
+    });
 
     // Backup .data/db.sqlite every 4 hours.
     setInterval(() => {
