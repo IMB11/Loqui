@@ -148,7 +148,7 @@ try {
 
     app.listen(config.port_number, () => {
       logger.info("Server is running on port " + config.port_number);
-      download(language_isos, project_id, lokalise);
+      // download(language_isos, project_id, lokalise);
     });
 
     cron.schedule('0 2 * * *', () => {
