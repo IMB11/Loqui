@@ -15,5 +15,12 @@ export default [
   "fantasyfurniture_royal",
   "fantasyfurniture_necrolord",
   "entityviewdistance",
-  "skyblocker"
+  "skyblocker",
+  "terralith", 
+  "incendium", 
+  "nullscape", 
+  "structory", 
+  "structory_towers",      
+  "continents",
+  "amplified_nether"
 ]
